@@ -1,17 +1,62 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getConnection, startConnection, stopConnection } from "../services/signalr";
 import { useNotificationStore } from "../stores/notificationStore";
-import type { NotificationResponse } from "../types";
+
+interface SignalRNotification {
+  id: number;
+  reminderId: number;
+  reminderTitle: string;
+  message: string;
+  scheduledAt: string;
+  channel: number;
+}
+
+/** Request browser notification permission on first call */
+async function requestNotificationPermission(): Promise<boolean> {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  const result = await Notification.requestPermission();
+  return result === "granted";
+}
+
+/** Send a browser push notification */
+function sendBrowserNotification(title: string, body: string, tag?: string) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+  const notification = new Notification(title, {
+    body,
+    icon: "/favicon.svg",
+    badge: "/favicon.svg",
+    tag: tag ?? "mbenote-reminder",
+    requireInteraction: true,
+    silent: false,
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+
+  // Auto-close after 30 seconds
+  setTimeout(() => notification.close(), 30000);
+}
 
 /**
  * Connects to the SignalR notifications hub on mount.
- * Listens for real-time events and updates local state / query cache.
+ * Listens for real-time events, shows browser push notifications,
+ * and updates local state / query cache.
  */
 export function useSignalR() {
   const queryClient = useQueryClient();
   const { setUnreadCount, increment } = useNotificationStore();
+
+  // Request permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -19,14 +64,31 @@ export function useSignalR() {
 
     const connection = getConnection();
 
-    // ── Event handlers ───────────────────────────────────────────────────────
-
-    const handleNotification = (notification: NotificationResponse) => {
+    const handleNotification = (notification: SignalRNotification) => {
       increment();
 
-      // Show toast
-      toast(notification.title, {
-        description: notification.message,
+      // Format time
+      const time = new Date(notification.scheduledAt).toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const title = `🔔 ${notification.reminderTitle}`;
+      const body = notification.message || `Aviso programado para las ${time}`;
+
+      // Browser push notification
+      sendBrowserNotification(title, body, `reminder-${notification.reminderId}`);
+
+      // In-app toast
+      toast(notification.reminderTitle, {
+        description: body,
+        duration: 10000,
+        action: {
+          label: "Ver",
+          onClick: () => {
+            window.location.href = "/reminders";
+          },
+        },
       });
 
       // Invalidate relevant queries

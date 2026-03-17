@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
+import { useSignalR } from '../hooks/useSignalR';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
 
 function getUserFromStorage(): { displayName: string; email: string } {
@@ -67,6 +68,9 @@ export function RootLayout() {
 
   const isCollapsed = !sidebarOpen && !isMobile;
   const user = useMemo(() => getUserFromStorage(), []);
+
+  // Connect to SignalR for real-time push notifications
+  useSignalR();
 
   // Close mobile drawer on route change
   useEffect(() => {
