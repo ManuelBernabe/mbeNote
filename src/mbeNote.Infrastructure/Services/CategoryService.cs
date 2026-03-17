@@ -17,19 +17,24 @@ public class CategoryService : ICategoryService
 
     public async Task<IReadOnlyList<CategoryResponse>> GetAllAsync(int userId)
     {
-        return await _db.ReminderCategories
+        var categories = await _db.ReminderCategories
             .Where(c => c.IsSystem || c.UserId == userId)
-            .Select(c => new CategoryResponse(
+            .Select(c => new
+            {
                 c.Id,
                 c.Name,
                 c.Icon,
                 c.Color,
                 c.IsSystem,
-                c.Reminders.Count(r => !r.IsDeleted)
-            ))
+                ReminderCount = c.Reminders.Count(r => !r.IsDeleted)
+            })
+            .ToListAsync();
+
+        return categories
             .OrderBy(c => c.IsSystem ? 0 : 1)
             .ThenBy(c => c.Name)
-            .ToListAsync();
+            .Select(c => new CategoryResponse(c.Id, c.Name, c.Icon, c.Color, c.IsSystem, c.ReminderCount))
+            .ToList();
     }
 
     public async Task<CategoryResponse> CreateAsync(int userId, CreateCategoryRequest request)

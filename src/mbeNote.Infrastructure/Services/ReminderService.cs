@@ -35,7 +35,7 @@ public class ReminderService : IReminderService
             IsAllDay = request.IsAllDay,
             TimeZone = request.TimeZone ?? "Europe/Madrid",
             Priority = request.Priority,
-            CategoryId = request.CategoryId,
+            CategoryId = request.CategoryId > 0 ? request.CategoryId : null,
             Location = request.Location?.Trim(),
             Color = request.Color ?? "#3b82f6",
             RecurrenceRule = request.RecurrenceRule,
@@ -70,7 +70,7 @@ public class ReminderService : IReminderService
         if (request.TimeZone != null) reminder.TimeZone = request.TimeZone;
         if (request.Priority.HasValue) reminder.Priority = request.Priority.Value;
         if (request.Status.HasValue) reminder.Status = request.Status.Value;
-        if (request.CategoryId.HasValue) reminder.CategoryId = request.CategoryId.Value;
+        if (request.CategoryId.HasValue) reminder.CategoryId = request.CategoryId.Value > 0 ? request.CategoryId.Value : null;
         if (request.Location != null) reminder.Location = request.Location.Trim();
         if (request.Color != null) reminder.Color = request.Color;
         if (request.RecurrenceRule != null) reminder.RecurrenceRule = request.RecurrenceRule;
