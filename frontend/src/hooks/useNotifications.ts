@@ -40,7 +40,7 @@ export function useMarkAsRead() {
   const decrement = useNotificationStore((s) => s.decrement);
 
   return useMutation({
-    mutationFn: (id: string) => api.markNotificationAsRead(id),
+    mutationFn: (id: number) => api.markNotificationAsRead(String(id)),
     onSuccess: () => {
       decrement();
       qc.invalidateQueries({ queryKey: KEYS.all });
@@ -65,7 +65,7 @@ export function useDismissNotification() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => api.dismissNotification(id),
+    mutationFn: (id: number) => api.dismissNotification(String(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEYS.all });
     },

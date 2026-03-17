@@ -30,7 +30,7 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   // Group by date
   const grouped = notifications.reduce(
     (acc: Record<string, NotificationResponse[]>, n) => {
-      const dateKey = format(new Date(n.sentAt), 'yyyy-MM-dd');
+      const dateKey = format(new Date(n.sentAt ?? n.scheduledAt), 'yyyy-MM-dd');
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(n);
       return acc;
@@ -62,7 +62,7 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
           Notificaciones
         </h3>
-        {notifications.some((n) => !n.isRead) && (
+        {notifications.some((n) => !n.readAt) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-blue-500 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
@@ -92,13 +92,13 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
                 <button
                   key={notification.id}
                   onClick={() => {
-                    if (!notification.isRead) {
+                    if (!notification.readAt) {
                       markReadMutation.mutate(notification.id);
                     }
                   }}
                   className={cn(
                     'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50',
-                    !notification.isRead &&
+                    !notification.readAt &&
                       'bg-blue-50/50 dark:bg-blue-500/5'
                   )}
                 >
@@ -114,12 +114,12 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
                     <p
                       className={cn(
                         'text-sm',
-                        notification.isRead
+                        notification.readAt
                           ? 'text-slate-600 dark:text-slate-400'
                           : 'font-medium text-slate-900 dark:text-white'
                       )}
                     >
-                      {notification.title}
+                      {notification.reminderTitle}
                     </p>
                     {notification.message && (
                       <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
@@ -127,10 +127,10 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
                       </p>
                     )}
                     <p className="mt-1 text-[10px] text-slate-400">
-                      {format(new Date(notification.sentAt), 'HH:mm')}
+                      {format(new Date(notification.sentAt ?? notification.scheduledAt), 'HH:mm')}
                     </p>
                   </div>
-                  {!notification.isRead && (
+                  {!notification.readAt && (
                     <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                   )}
                 </button>

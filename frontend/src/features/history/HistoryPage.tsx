@@ -27,11 +27,11 @@ export function HistoryPage() {
   const filtered = useMemo(() => {
     return history.filter((entry) => {
       if (actionFilter !== 'all' && String(entry.action) !== actionFilter) return false;
-      if (dateFrom && new Date(entry.performedAt) < new Date(dateFrom)) return false;
+      if (dateFrom && new Date(entry.timestamp) < new Date(dateFrom)) return false;
       if (dateTo) {
         const to = new Date(dateTo);
         to.setHours(23, 59, 59);
-        if (new Date(entry.performedAt) > to) return false;
+        if (new Date(entry.timestamp) > to) return false;
       }
       return true;
     });

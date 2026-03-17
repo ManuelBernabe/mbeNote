@@ -69,7 +69,7 @@ export function AnalyticsPage() {
   const completionData = (() => {
     const days = eachDayOfInterval({ start: subDays(now, dateRange), end: now });
     // We don't have per-day data from the API, so show overall
-    const rate = completionRate?.completionRate ?? 0;
+    const rate = completionRate?.rate ?? 0;
     return days
       .filter((_, i) => i % Math.max(1, Math.floor(dateRange / 15)) === 0)
       .map((day) => ({
@@ -166,7 +166,7 @@ export function AnalyticsPage() {
             </h3>
             {completionRate && (
               <span className="ml-auto text-lg font-bold text-blue-500">
-                {Math.round(completionRate.completionRate * 100)}%
+                {Math.round(completionRate.rate * 100)}%
               </span>
             )}
           </div>
@@ -253,7 +253,7 @@ export function AnalyticsPage() {
               </div>
               <div className="flex-1 space-y-2">
                 {categoryDist.map((cat, i) => (
-                  <div key={cat.categoryId} className="flex items-center gap-2">
+                  <div key={cat.categoryName} className="flex items-center gap-2">
                     <div
                       className="h-3 w-3 rounded-full"
                       style={{

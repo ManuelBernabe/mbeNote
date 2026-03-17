@@ -47,70 +47,79 @@ export interface RegisterRequest {
 export interface AuthResponse {
   token: string;
   refreshToken: string;
-  expiresAt: string;
   user: UserResponse;
 }
 
 export interface UserResponse {
-  id: string;
+  id: number;
   email: string;
   displayName: string;
   avatarUrl?: string;
-  createdAt: string;
+  timeZone: string;
 }
 
 // ── Reminders ──────────────────────────────────────────────────────────────────
 
 export interface ReminderResponse {
-  id: string;
+  id: number;
   title: string;
-  description?: string;
+  description?: string | null;
   startDateTime: string;
-  endDateTime?: string;
+  endDateTime?: string | null;
+  isAllDay: boolean;
+  timeZone: string;
   priority: ReminderPriority;
   status: ReminderStatus;
-  recurrenceRule?: string;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  categoryColor?: string | null;
+  location?: string | null;
+  color: string;
+  recurrenceRule?: string | null;
+  recurrenceDescription?: string | null;
+  recurrenceEndDate?: string | null;
+  notificationOffsets: string;
   notificationChannels: NotificationChannel;
-  notifyMinutesBefore: number;
-  categoryId?: string;
-  category?: CategoryResponse;
-  tags: string[];
-  isAllDay: boolean;
-  location?: string;
-  snoozedUntil?: string;
-  completedAt?: string;
+  snoozedUntil?: string | null;
+  snoozeCount: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface CreateReminderRequest {
   title: string;
-  description?: string;
+  description?: string | null;
   startDateTime: string;
-  endDateTime?: string;
+  endDateTime?: string | null;
+  isAllDay: boolean;
+  timeZone?: string | null;
   priority: ReminderPriority;
-  recurrenceRule?: string;
-  notificationChannels: NotificationChannel;
-  notifyMinutesBefore: number;
-  categoryId?: string;
-  tags?: string[];
-  isAllDay?: boolean;
-  location?: string;
+  categoryId?: number | null;
+  location?: string | null;
+  color?: string | null;
+  recurrenceRule?: string | null;
+  recurrenceEndDate?: string | null;
+  notificationOffsets?: string | null;
+  notificationChannels?: NotificationChannel | null;
 }
 
 export interface UpdateReminderRequest {
-  title?: string;
-  description?: string;
-  startDateTime?: string;
-  endDateTime?: string;
-  priority?: ReminderPriority;
-  recurrenceRule?: string;
-  notificationChannels?: NotificationChannel;
-  notifyMinutesBefore?: number;
-  categoryId?: string;
-  tags?: string[];
-  isAllDay?: boolean;
-  location?: string;
+  title?: string | null;
+  description?: string | null;
+  startDateTime?: string | null;
+  endDateTime?: string | null;
+  isAllDay?: boolean | null;
+  timeZone?: string | null;
+  priority?: ReminderPriority | null;
+  status?: ReminderStatus | null;
+  categoryId?: number | null;
+  location?: string | null;
+  color?: string | null;
+  recurrenceRule?: string | null;
+  recurrenceEndDate?: string | null;
+  notificationOffsets?: string | null;
+  notificationChannels?: NotificationChannel | null;
 }
 
 export interface ReminderListQuery {
@@ -118,16 +127,14 @@ export interface ReminderListQuery {
   pageSize?: number;
   status?: ReminderStatus;
   priority?: ReminderPriority;
-  categoryId?: string;
+  categoryId?: number;
   from?: string;
   to?: string;
   search?: string;
-  sortBy?: string;
-  sortDescending?: boolean;
 }
 
 export interface SnoozeRequest {
-  snoozedUntil: string;
+  minutes: number;
 }
 
 // ── Paged results ──────────────────────────────────────────────────────────────
@@ -137,63 +144,61 @@ export interface PagedResult<T> {
   totalCount: number;
   page: number;
   pageSize: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
 }
 
 // ── Categories ─────────────────────────────────────────────────────────────────
 
 export interface CategoryResponse {
-  id: string;
+  id: number;
   name: string;
-  color?: string;
-  icon?: string;
+  icon: string;
+  color: string;
+  isSystem: boolean;
   reminderCount: number;
-  createdAt: string;
 }
 
 export interface CreateCategoryRequest {
   name: string;
-  color?: string;
   icon?: string;
+  color?: string;
 }
 
 export interface UpdateCategoryRequest {
   name?: string;
-  color?: string;
   icon?: string;
+  color?: string;
 }
 
 // ── Notifications ──────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {
-  id: string;
-  reminderId: string;
-  title: string;
-  message: string;
+  id: number;
+  reminderId: number;
+  reminderTitle: string;
+  scheduledAt: string;
+  sentAt?: string | null;
+  readAt?: string | null;
   channel: NotificationChannel;
-  isRead: boolean;
-  sentAt: string;
-  readAt?: string;
+  message?: string | null;
 }
 
 export interface NotificationListQuery {
+  unreadOnly?: boolean;
   page?: number;
   pageSize?: number;
-  isRead?: boolean;
 }
 
 // ── History ────────────────────────────────────────────────────────────────────
 
 export interface HistoryResponse {
-  id: string;
-  reminderId: string;
+  id: number;
+  reminderId: number;
+  reminderTitle?: string | null;
   action: HistoryAction;
-  description: string;
-  changes?: string;
-  performedAt: string;
-  performedBy: string;
+  description?: string | null;
+  previousState?: string | null;
+  newState?: string | null;
+  timestamp: string;
 }
 
 export interface HistoryListQuery {
@@ -207,28 +212,27 @@ export interface HistoryListQuery {
 // ── Analytics ──────────────────────────────────────────────────────────────────
 
 export interface CompletionRateResponse {
-  totalReminders: number;
-  completedReminders: number;
-  completionRate: number;
-  periodStart: string;
-  periodEnd: string;
+  date: string;
+  total: number;
+  completed: number;
+  rate: number;
 }
 
 export interface ActiveHoursResponse {
   hour: number;
+  dayOfWeek: number;
   count: number;
 }
 
 export interface StreakResponse {
   currentStreak: number;
   longestStreak: number;
-  lastCompletedDate?: string;
+  lastCompletedDate?: string | null;
 }
 
 export interface CategoryDistributionResponse {
-  categoryId: string;
   categoryName: string;
-  color?: string;
+  color: string;
   count: number;
   percentage: number;
 }
@@ -240,18 +244,13 @@ export interface NaturalLanguageRequest {
 }
 
 export interface NaturalLanguageResponse {
-  title: string;
-  description?: string;
-  startDateTime: string;
-  endDateTime?: string;
-  priority: ReminderPriority;
-  recurrenceRule?: string;
-  location?: string;
-  confidence: number;
+  title?: string | null;
+  startDateTime?: string | null;
+  recurrenceRule?: string | null;
+  recurrenceDescription?: string | null;
 }
 
 export interface ConflictCheckRequest {
   startDateTime: string;
-  endDateTime?: string;
-  excludeReminderId?: string;
+  endDateTime: string;
 }

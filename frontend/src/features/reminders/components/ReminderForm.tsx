@@ -23,7 +23,6 @@ const reminderSchema = z.object({
   location: z.string().optional(),
   recurrenceRule: z.string().optional(),
   notifyMinutesBefore: z.number(),
-  tags: z.array(z.string()),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -75,11 +74,17 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
         : '',
       isAllDay: reminder?.isAllDay ?? false,
       priority: reminder?.priority ?? ReminderPriority.Medium,
-      categoryId: reminder?.categoryId ?? '',
+      categoryId: reminder?.categoryId != null ? String(reminder.categoryId) : '',
       location: reminder?.location ?? '',
       recurrenceRule: reminder?.recurrenceRule ?? '',
-      notifyMinutesBefore: reminder?.notifyMinutesBefore ?? 15,
-      tags: reminder?.tags ?? [],
+      notifyMinutesBefore: (() => {
+        try {
+          const offsets = JSON.parse(reminder?.notificationOffsets ?? '[]');
+          return Array.isArray(offsets) && offsets.length > 0 ? offsets[0] : 15;
+        } catch {
+          return 15;
+        }
+      })(),
     },
   });
 
@@ -108,7 +113,7 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       };
 
       if (isEditing && reminder) {
-        await updateMutation.mutateAsync({ id: reminder.id, data: payload });
+        await updateMutation.mutateAsync({ id: String(reminder.id), data: payload });
       } else {
         await createMutation.mutateAsync(payload);
       }

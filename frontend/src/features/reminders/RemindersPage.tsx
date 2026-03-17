@@ -37,7 +37,7 @@ export function RemindersPage() {
       }
       if (statusFilter !== 'all' && String(r.status) !== statusFilter) return false;
       if (priorityFilter !== 'all' && String(r.priority) !== priorityFilter) return false;
-      if (categoryFilter !== 'all' && r.categoryId !== categoryFilter) return false;
+      if (categoryFilter !== 'all' && String(r.categoryId) !== categoryFilter) return false;
       return true;
     });
   }, [reminders, search, statusFilter, priorityFilter, categoryFilter]);

@@ -185,7 +185,7 @@ export function CalendarPage() {
                           key={r.id}
                           className="truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight text-white"
                           style={{
-                            backgroundColor: r.category?.color ?? '#3b82f6',
+                            backgroundColor: r.categoryColor ?? '#3b82f6',
                           }}
                         >
                           {r.title}
@@ -250,7 +250,7 @@ export function CalendarPage() {
                             key={r.id}
                             className="truncate rounded px-1 py-0.5 text-[10px] font-medium text-white"
                             style={{
-                              backgroundColor: r.category?.color ?? '#3b82f6',
+                              backgroundColor: r.categoryColor ?? '#3b82f6',
                             }}
                           >
                             {r.title}
@@ -287,7 +287,7 @@ export function CalendarPage() {
                           key={r.id}
                           className="mb-1 rounded-lg px-3 py-2 text-sm font-medium text-white"
                           style={{
-                            backgroundColor: r.category?.color ?? '#3b82f6',
+                            backgroundColor: r.categoryColor ?? '#3b82f6',
                           }}
                         >
                           <p>{r.title}</p>

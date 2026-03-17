@@ -22,15 +22,13 @@ export function QuickActions() {
         // Try natural language parsing first
         const parsed = await api.parseNaturalLanguage({ text });
         await createMutation.mutateAsync({
-          title: parsed.title,
-          description: parsed.description,
-          startDateTime: parsed.startDateTime,
-          endDateTime: parsed.endDateTime,
-          priority: parsed.priority ?? ReminderPriority.Medium,
+          title: parsed.title ?? text,
+          startDateTime: parsed.startDateTime ?? new Date().toISOString(),
+          isAllDay: false,
+          priority: ReminderPriority.Medium,
           recurrenceRule: parsed.recurrenceRule,
-          location: parsed.location,
           notificationChannels: NotificationChannel.InApp,
-          notifyMinutesBefore: 15,
+          notificationOffsets: '[15]',
         });
         toast.success(`Aviso creado: "${parsed.title}"`);
         setInput('');
@@ -40,9 +38,10 @@ export function QuickActions() {
           await createMutation.mutateAsync({
             title: text,
             startDateTime: new Date().toISOString(),
+            isAllDay: false,
             priority: ReminderPriority.Medium,
             notificationChannels: NotificationChannel.InApp,
-            notifyMinutesBefore: 15,
+            notificationOffsets: '[15]',
           });
           toast.success(`Aviso creado: "${text}"`);
           setInput('');

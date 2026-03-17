@@ -156,8 +156,8 @@ export function DashboardPage() {
           {(() => {
             const categories: Record<string, { count: number; color: string }> = {};
             activeReminders.forEach((r) => {
-              const cat = r.category?.name ?? 'Sin categoría';
-              const color = r.category?.color ?? '#94a3b8';
+              const cat = r.categoryName ?? 'Sin categoría';
+              const color = r.categoryColor ?? '#94a3b8';
               if (!categories[cat]) categories[cat] = { count: 0, color };
               categories[cat].count++;
             });

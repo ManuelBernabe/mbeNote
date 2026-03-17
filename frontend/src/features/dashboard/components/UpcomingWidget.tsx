@@ -56,7 +56,7 @@ export function UpcomingWidget({ reminders }: UpcomingWidgetProps) {
                 <div
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: reminder.category?.color ?? '#94a3b8',
+                    backgroundColor: reminder.categoryColor ?? '#94a3b8',
                   }}
                 />
                 {/* Content */}

@@ -46,7 +46,7 @@ export function ReminderDetail({
 
   const handleComplete = async () => {
     try {
-      await completeMutation.mutateAsync(reminder.id);
+      await completeMutation.mutateAsync(String(reminder.id));
       toast.success('Aviso completado');
       onRefresh();
       onClose();
@@ -57,7 +57,7 @@ export function ReminderDetail({
 
   const handleDelete = async () => {
     try {
-      await deleteMutation.mutateAsync(reminder.id);
+      await deleteMutation.mutateAsync(String(reminder.id));
       toast.success('Aviso eliminado');
       onRefresh();
       onClose();
@@ -86,7 +86,7 @@ export function ReminderDetail({
         <div
           className="h-2 w-full"
           style={{
-            backgroundColor: reminder.category?.color ?? '#3b82f6',
+            backgroundColor: reminder.categoryColor ?? '#3b82f6',
           }}
         />
 
@@ -162,16 +162,16 @@ export function ReminderDetail({
             )}
 
             {/* Category */}
-            {reminder.category && (
+            {reminder.categoryName && (
               <div className="flex items-center gap-3 text-sm">
                 <Tag className="h-4 w-4 text-slate-400" />
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: reminder.category.color }}
+                    style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
                   />
                   <span className="text-slate-700 dark:text-slate-300">
-                    {reminder.category.name}
+                    {reminder.categoryName}
                   </span>
                 </div>
               </div>
@@ -188,31 +188,12 @@ export function ReminderDetail({
             )}
 
             {/* Notification */}
-            {reminder.notifyMinutesBefore > 0 && (
+            {reminder.notificationOffsets && reminder.notificationOffsets !== '[]' && (
               <div className="flex items-center gap-3 text-sm">
                 <Bell className="h-4 w-4 text-slate-400" />
                 <span className="text-slate-700 dark:text-slate-300">
-                  {reminder.notifyMinutesBefore >= 1440
-                    ? `${reminder.notifyMinutesBefore / 1440} día(s)`
-                    : reminder.notifyMinutesBefore >= 60
-                    ? `${reminder.notifyMinutesBefore / 60} hora(s)`
-                    : `${reminder.notifyMinutesBefore} min`}{' '}
-                  antes
+                  Notificación configurada
                 </span>
-              </div>
-            )}
-
-            {/* Tags */}
-            {reminder.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {reminder.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                  >
-                    #{tag}
-                  </span>
-                ))}
               </div>
             )}
           </div>

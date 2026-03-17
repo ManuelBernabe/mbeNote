@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { addMinutes } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
 import { useCompleteReminder, useSnoozeReminder, useDeleteReminder } from '../../../hooks/useReminders';
@@ -73,7 +72,7 @@ export function ReminderCard({
   const handleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await completeMutation.mutateAsync(reminder.id);
+      await completeMutation.mutateAsync(String(reminder.id));
       toast.success('Aviso completado');
     } catch {
       toast.error('Error al completar');
@@ -83,10 +82,9 @@ export function ReminderCard({
   const handleSnooze = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const snoozedUntil = addMinutes(new Date(), 15).toISOString();
       await snoozeMutation.mutateAsync({
-        id: reminder.id,
-        data: { snoozedUntil },
+        id: String(reminder.id),
+        data: { minutes: 15 },
       });
       toast.success('Pospuesto 15 minutos');
     } catch {
@@ -97,7 +95,7 @@ export function ReminderCard({
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await deleteMutation.mutateAsync(reminder.id);
+      await deleteMutation.mutateAsync(String(reminder.id));
       toast.success('Aviso eliminado');
     } catch {
       toast.error('Error al eliminar');
@@ -116,7 +114,7 @@ export function ReminderCard({
         {/* Category color strip */}
         <div
           className="h-10 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: reminder.category?.color ?? '#94a3b8' }}
+          style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
         />
 
         {/* Content */}
@@ -211,7 +209,7 @@ export function ReminderCard({
       {/* Category color strip */}
       <div
         className="h-1 w-full"
-        style={{ backgroundColor: reminder.category?.color ?? '#94a3b8' }}
+        style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
       />
 
       <div className="p-4">

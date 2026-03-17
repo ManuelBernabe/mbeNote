@@ -49,7 +49,7 @@ export function SettingsPage() {
 
   // Category management
   const [editingCategory, setEditingCategory] = useState<{
-    id: string;
+    id: number;
     name: string;
     color: string;
   } | null>(null);
@@ -78,11 +78,11 @@ export function SettingsPage() {
     }
   };
 
-  const handleUpdateCategory = async (id: string) => {
+  const handleUpdateCategory = async (id: number) => {
     if (!editingCategory) return;
     try {
       await updateCategoryMutation.mutateAsync({
-        id,
+        id: String(id),
         data: {
           name: editingCategory.name,
           color: editingCategory.color,
@@ -95,9 +95,9 @@ export function SettingsPage() {
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDeleteCategory = async (id: number) => {
     try {
-      await deleteCategoryMutation.mutateAsync(id);
+      await deleteCategoryMutation.mutateAsync(String(id));
       toast.success('Categoría eliminada');
     } catch {
       toast.error('Error al eliminar');

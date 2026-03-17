@@ -70,7 +70,7 @@ interface HistoryTimelineProps {
 export function HistoryTimeline({ entries }: HistoryTimelineProps) {
   // Group entries by date
   const grouped = entries.reduce((acc: Record<string, HistoryResponse[]>, entry) => {
-    const dateKey = format(new Date(entry.performedAt), 'yyyy-MM-dd');
+    const dateKey = format(new Date(entry.timestamp), 'yyyy-MM-dd');
     if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(entry);
     return acc;
@@ -131,7 +131,7 @@ export function HistoryTimeline({ entries }: HistoryTimelineProps) {
                             {config.label}
                           </span>
                           <span className="text-xs text-slate-400">
-                            {format(new Date(entry.performedAt), 'HH:mm')}
+                            {format(new Date(entry.timestamp), 'HH:mm')}
                           </span>
                         </div>
                         <p className="mt-0.5 text-sm text-slate-700 dark:text-slate-300">
