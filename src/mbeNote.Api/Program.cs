@@ -118,12 +118,9 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve frontend static files in production
-if (!app.Environment.IsDevelopment())
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
-}
+// Serve frontend static files
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 
 // Health check endpoint
@@ -302,9 +299,6 @@ analytics.MapGet("/category-distribution", async (HttpContext ctx, IAnalyticsSer
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 // SPA fallback - serve index.html for non-API routes
-if (!app.Environment.IsDevelopment())
-{
-    app.MapFallbackToFile("index.html");
-}
+app.MapFallbackToFile("index.html");
 
 app.Run();
