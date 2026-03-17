@@ -67,10 +67,10 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       title: reminder?.title ?? '',
       description: reminder?.description ?? '',
       startDateTime: reminder?.startDateTime
-        ? new Date(reminder.startDateTime).toISOString().slice(0, 16)
+        ? reminder.startDateTime.slice(0, 16)
         : '',
       endDateTime: reminder?.endDateTime
-        ? new Date(reminder.endDateTime).toISOString().slice(0, 16)
+        ? reminder.endDateTime.slice(0, 16)
         : '',
       isAllDay: reminder?.isAllDay ?? false,
       priority: reminder?.priority ?? ReminderPriority.Medium,
