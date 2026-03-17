@@ -13,11 +13,13 @@ public class ReminderService : IReminderService
     private readonly AppDbContext _db;
     private readonly IRecurrenceService _recurrence;
     private readonly IReminderHistoryService _history;
+    private readonly INotificationService _notifications;
 
-    public ReminderService(AppDbContext db, IRecurrenceService recurrence, IReminderHistoryService history)
+    public ReminderService(AppDbContext db, IRecurrenceService recurrence, IReminderHistoryService history, INotificationService notifications)
     {
         _db = db;
         _recurrence = recurrence;
+        _notifications = notifications;
         _history = history;
     }
 
@@ -49,6 +51,9 @@ public class ReminderService : IReminderService
         var newState = JsonSerializer.Serialize(reminder);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Created, null, newState, $"Aviso creado: {reminder.Title}");
 
+        // Schedule notifications
+        await _notifications.ScheduleForReminderAsync(reminder);
+
         return await MapToResponseAsync(reminder);
     }
 
@@ -79,6 +84,9 @@ public class ReminderService : IReminderService
         var newState = JsonSerializer.Serialize(reminder);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Updated, previousState, newState, $"Aviso actualizado: {reminder.Title}");
 
+        // Reschedule notifications
+        await _notifications.ScheduleForReminderAsync(reminder);
+
         return await MapToResponseAsync(reminder);
     }
 
@@ -92,6 +100,7 @@ public class ReminderService : IReminderService
         await _db.SaveChangesAsync();
 
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Deleted, previousState, null, $"Aviso eliminado: {reminder.Title}");
+        await _notifications.CancelForReminderAsync(reminder.Id);
     }
 
     public async Task<ReminderResponse?> GetByIdAsync(int userId, int id)
@@ -144,6 +153,7 @@ public class ReminderService : IReminderService
 
         var newState = JsonSerializer.Serialize(reminder);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Completed, previousState, newState, $"Aviso completado: {reminder.Title}");
+        await _notifications.CancelForReminderAsync(reminder.Id);
 
         return await MapToResponseAsync(reminder);
     }
