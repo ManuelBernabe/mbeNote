@@ -13,16 +13,19 @@ COPY mbeNote.sln ./
 COPY src/mbeNote.Core/mbeNote.Core.csproj src/mbeNote.Core/
 COPY src/mbeNote.Infrastructure/mbeNote.Infrastructure.csproj src/mbeNote.Infrastructure/
 COPY src/mbeNote.Api/mbeNote.Api.csproj src/mbeNote.Api/
+COPY tests/mbeNote.Tests/mbeNote.Tests.csproj tests/mbeNote.Tests/
 RUN dotnet restore
 COPY src/ src/
+COPY tests/ tests/
 RUN dotnet publish src/mbeNote.Api -c Release -o /out
 
 # Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+RUN mkdir -p /app/data
 COPY --from=backend-build /out .
 COPY --from=frontend-build /app/frontend/dist wwwroot/
-ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "mbeNote.Api.dll"]

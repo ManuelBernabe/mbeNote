@@ -97,10 +97,15 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Apply migrations
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Error applying migrations");
 }
 
 if (app.Environment.IsDevelopment())
