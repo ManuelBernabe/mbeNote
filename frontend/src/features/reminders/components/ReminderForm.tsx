@@ -157,16 +157,17 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
           onSubmit={handleSubmit(onSubmit)}
           className="max-h-[70vh] overflow-y-auto p-6"
         >
-          <div className="space-y-5">
+          <div className="space-y-4">
             {/* Title */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Título
+                Título *
               </label>
               <input
                 {...register('title')}
                 placeholder="Nombre del aviso"
                 className="input-field"
+                autoFocus
               />
               {errors.title && (
                 <p className="mt-1 text-xs text-red-500">
@@ -175,58 +176,62 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
               )}
             </div>
 
+            {/* Date/Time - PROMINENT */}
+            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-500/20 dark:bg-blue-500/5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                  📅 Fecha y hora *
+                </span>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register('isAllDay')}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    Todo el día
+                  </span>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+                    Inicio
+                  </label>
+                  <input
+                    type={watchIsAllDay ? 'date' : 'datetime-local'}
+                    {...register('startDateTime')}
+                    className="input-field text-sm"
+                  />
+                  {errors.startDateTime && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.startDateTime.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+                    Fin (opcional)
+                  </label>
+                  <input
+                    type={watchIsAllDay ? 'date' : 'datetime-local'}
+                    {...register('endDateTime')}
+                    className="input-field text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Description */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Descripción
               </label>
-              <textarea
-                {...register('description')}
-                rows={3}
-                placeholder="Descripción opcional..."
-                className="input-field resize-none"
-              />
-            </div>
-
-            {/* All day toggle */}
-            <label className="flex items-center gap-3">
               <input
-                type="checkbox"
-                {...register('isAllDay')}
-                className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                {...register('description')}
+                placeholder="Descripción opcional..."
+                className="input-field"
               />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Todo el día
-              </span>
-            </label>
-
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Inicio
-                </label>
-                <input
-                  type={watchIsAllDay ? 'date' : 'datetime-local'}
-                  {...register('startDateTime')}
-                  className="input-field"
-                />
-                {errors.startDateTime && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {errors.startDateTime.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Fin
-                </label>
-                <input
-                  type={watchIsAllDay ? 'date' : 'datetime-local'}
-                  {...register('endDateTime')}
-                  className="input-field"
-                />
-              </div>
             </div>
 
             {/* Priority */}
