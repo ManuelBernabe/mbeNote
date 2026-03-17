@@ -19,19 +19,31 @@ public class NotificationService : INotificationService
 
     public async Task ScheduleForReminderAsync(Reminder reminder)
     {
-        // Remove existing unset notifications for this reminder
+        // Remove existing unsent notifications for this reminder
         var existing = await _db.ReminderNotifications
             .Where(n => n.ReminderId == reminder.Id && n.SentAt == null)
             .ToListAsync();
         _db.ReminderNotifications.RemoveRange(existing);
 
-        // Parse notification offsets
+        var now = DateTime.Now;
         var offsets = JsonSerializer.Deserialize<int[]>(reminder.NotificationOffsets) ?? new[] { 15 };
+        var hasScheduled = false;
 
         foreach (var minutesBefore in offsets)
         {
             var scheduledAt = reminder.StartDateTime.AddMinutes(-minutesBefore);
-            if (scheduledAt <= DateTime.Now) continue;
+
+            // If notification time is in the past but reminder is still in the future,
+            // schedule for 30 seconds from now (so the Quartz job picks it up immediately)
+            if (scheduledAt <= now && reminder.StartDateTime > now)
+            {
+                scheduledAt = now.AddSeconds(30);
+            }
+            else if (scheduledAt <= now)
+            {
+                // Both notification time and reminder time are in the past, skip
+                continue;
+            }
 
             _db.ReminderNotifications.Add(new ReminderNotification
             {
@@ -40,6 +52,20 @@ public class NotificationService : INotificationService
                 ScheduledAt = scheduledAt,
                 Channel = reminder.NotificationChannels,
                 Message = $"{reminder.Title} - en {FormatOffset(minutesBefore)}"
+            });
+            hasScheduled = true;
+        }
+
+        // Always schedule a notification at the exact reminder time
+        if (reminder.StartDateTime > now)
+        {
+            _db.ReminderNotifications.Add(new ReminderNotification
+            {
+                ReminderId = reminder.Id,
+                UserId = reminder.UserId,
+                ScheduledAt = reminder.StartDateTime,
+                Channel = reminder.NotificationChannels,
+                Message = $"🔔 {reminder.Title} - ¡ahora!"
             });
         }
 
