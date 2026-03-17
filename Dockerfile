@@ -23,6 +23,9 @@ RUN dotnet publish src/mbeNote.Api -c Release -o /out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 RUN mkdir -p /app/data
+# Set timezone to Europe/Madrid so DateTime.Now matches user's local time
+ENV TZ=Europe/Madrid
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY --from=backend-build /out .
 COPY --from=frontend-build /app/frontend/dist wwwroot/
 ENV ASPNETCORE_URLS=http://+:${PORT:-8080}

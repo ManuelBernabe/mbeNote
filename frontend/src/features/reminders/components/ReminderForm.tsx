@@ -89,19 +89,22 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
 
   const onSubmit = async (data: ReminderFormData) => {
     try {
-      const payload = {
+      // Send datetime as-is (local time string) so the backend stores the user's intended time
+      const startDt = data.startDateTime; // "2026-03-17T18:00"
+      const endDt = data.endDateTime || null;
+
+      const payload: any = {
         title: data.title,
-        description: data.description || undefined,
-        startDateTime: new Date(data.startDateTime).toISOString(),
-        endDateTime: data.endDateTime ? new Date(data.endDateTime).toISOString() : undefined,
+        description: data.description || null,
+        startDateTime: startDt,
+        endDateTime: endDt,
         isAllDay: data.isAllDay,
         priority: data.priority as ReminderPriority,
-        categoryId: data.categoryId || undefined,
-        location: data.location || undefined,
-        recurrenceRule: data.recurrenceRule || undefined,
-        notifyMinutesBefore: data.notifyMinutesBefore,
+        categoryId: data.categoryId ? parseInt(data.categoryId, 10) : null,
+        location: data.location || null,
+        recurrenceRule: data.recurrenceRule || null,
+        notificationOffsets: JSON.stringify([data.notifyMinutesBefore]),
         notificationChannels: NotificationChannel.InApp,
-        tags: data.tags,
       };
 
       if (isEditing && reminder) {

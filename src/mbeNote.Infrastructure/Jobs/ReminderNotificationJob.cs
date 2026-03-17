@@ -22,7 +22,7 @@ public class ReminderNotificationJob : IJob
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var pendingNotifications = await db.ReminderNotifications
             .Include(n => n.Reminder)
             .Where(n => n.SentAt == null && n.ScheduledAt <= now)

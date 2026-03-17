@@ -24,7 +24,7 @@ public class ReminderRecurrenceJob : IJob
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var recurrenceService = scope.ServiceProvider.GetRequiredService<IRecurrenceService>();
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var horizon = now.AddHours(48);
 
         // Get all active recurring reminders

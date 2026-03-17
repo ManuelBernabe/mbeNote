@@ -31,7 +31,7 @@ public class NotificationService : INotificationService
         foreach (var minutesBefore in offsets)
         {
             var scheduledAt = reminder.StartDateTime.AddMinutes(-minutesBefore);
-            if (scheduledAt <= DateTime.UtcNow) continue;
+            if (scheduledAt <= DateTime.Now) continue;
 
             _db.ReminderNotifications.Add(new ReminderNotification
             {
@@ -97,7 +97,7 @@ public class NotificationService : INotificationService
             .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId);
         if (notification != null)
         {
-            notification.ReadAt = DateTime.UtcNow;
+            notification.ReadAt = DateTime.Now;
             await _db.SaveChangesAsync();
         }
     }
@@ -109,7 +109,7 @@ public class NotificationService : INotificationService
             .ToListAsync();
 
         foreach (var n in unread)
-            n.ReadAt = DateTime.UtcNow;
+            n.ReadAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
     }
@@ -120,7 +120,7 @@ public class NotificationService : INotificationService
             .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId);
         if (notification != null)
         {
-            notification.DismissedAt = DateTime.UtcNow;
+            notification.DismissedAt = DateTime.Now;
             await _db.SaveChangesAsync();
         }
     }
