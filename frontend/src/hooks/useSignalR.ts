@@ -53,10 +53,7 @@ export function useSignalR() {
   const queryClient = useQueryClient();
   const { setUnreadCount, increment } = useNotificationStore();
 
-  // Request permission on mount
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
+  // Note: permission is requested via the "Activar avisos" button in NotificationBell
 
   useEffect(() => {
     const token = localStorage.getItem("token");
