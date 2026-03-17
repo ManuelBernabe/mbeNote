@@ -44,6 +44,9 @@ export function LoginPage() {
       if (response.refreshToken) {
         localStorage.setItem('refreshToken', response.refreshToken);
       }
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
       toast.success('Sesión iniciada correctamente');
       navigate('/', { replace: true });
     } catch (err: any) {

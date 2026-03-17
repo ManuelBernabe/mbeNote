@@ -49,6 +49,9 @@ export function RegisterPage() {
       if (response.refreshToken) {
         localStorage.setItem('refreshToken', response.refreshToken);
       }
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
       toast.success('Cuenta creada correctamente');
       navigate('/', { replace: true });
     } catch (err: any) {

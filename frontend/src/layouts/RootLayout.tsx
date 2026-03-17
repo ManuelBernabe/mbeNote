@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +18,26 @@ import {
 import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
+
+function getUserFromStorage(): { displayName: string; email: string } {
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      const user = JSON.parse(raw);
+      return { displayName: user.displayName || 'Usuario', email: user.email || '' };
+    }
+    // Fallback: decode JWT token
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return {
+        displayName: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || 'Usuario',
+        email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || '',
+      };
+    }
+  } catch {}
+  return { displayName: 'Usuario', email: '' };
+}
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -46,6 +66,7 @@ export function RootLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isCollapsed = !sidebarOpen && !isMobile;
+  const user = useMemo(() => getUserFromStorage(), []);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -61,6 +82,7 @@ export function RootLayout() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     window.location.href = '/login';
   }, []);
 
@@ -170,15 +192,15 @@ export function RootLayout() {
           )}
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-semibold text-white">
-            U
+            {user.displayName.charAt(0).toUpperCase()}
           </div>
           {!isCollapsed && (
             <div className="ml-3 flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                Usuario
+                {user.displayName}
               </p>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                user@email.com
+                {user.email}
               </p>
             </div>
           )}
