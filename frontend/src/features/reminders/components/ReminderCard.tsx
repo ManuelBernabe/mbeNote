@@ -6,12 +6,14 @@ import {
   Trash2,
   Repeat,
   MapPin,
+  BellOff,
+  BellRing,
 } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
-import { useCompleteReminder, useSnoozeReminder, useDeleteReminder } from '../../../hooks/useReminders';
+import { useCompleteReminder, useSnoozeReminder, useDeleteReminder, useMuteReminder, useUnmuteReminder } from '../../../hooks/useReminders';
 import { ReminderPriority, ReminderStatus } from '../../../types';
 import type { ReminderResponse } from '../../../types';
 
@@ -43,6 +45,7 @@ const statusConfig: Record<number, { label: string; dot: string }> = {
   [ReminderStatus.Completed]: { label: 'Completado', dot: 'bg-blue-500' },
   [ReminderStatus.Cancelled]: { label: 'Cancelado', dot: 'bg-slate-400' },
   [ReminderStatus.Snoozed]: { label: 'Pospuesto', dot: 'bg-violet-500' },
+  [ReminderStatus.Muted]: { label: 'Silenciado', dot: 'bg-slate-400' },
 };
 
 interface ReminderCardProps {
@@ -63,6 +66,9 @@ export function ReminderCard({
   const completeMutation = useCompleteReminder();
   const snoozeMutation = useSnoozeReminder();
   const deleteMutation = useDeleteReminder();
+  const muteMutation = useMuteReminder();
+  const unmuteMutation = useUnmuteReminder();
+  const isMuted = reminder.status === ReminderStatus.Muted;
 
   const date = new Date(reminder.startDateTime);
   const isOverdue = isPast(date) && reminder.status === ReminderStatus.Active;
@@ -99,6 +105,21 @@ export function ReminderCard({
       toast.success('Aviso eliminado');
     } catch {
       toast.error('Error al eliminar');
+    }
+  };
+
+  const handleToggleMute = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (isMuted) {
+        await unmuteMutation.mutateAsync(String(reminder.id));
+        toast.success('Notificaciones activadas');
+      } else {
+        await muteMutation.mutateAsync(String(reminder.id));
+        toast.success('No recordar - notificaciones desactivadas');
+      }
+    } catch {
+      toast.error('Error al cambiar notificaciones');
     }
   };
 
@@ -168,6 +189,18 @@ export function ReminderCard({
               <Check className="h-4 w-4" />
             </button>
           )}
+          <button
+            onClick={handleToggleMute}
+            className={cn(
+              "rounded-lg p-1.5 transition-colors",
+              isMuted
+                ? "text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+            title={isMuted ? 'Activar notificaciones' : 'No recordar'}
+          >
+            {isMuted ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
           <button
             onClick={handleSnooze}
             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-500/10"
@@ -282,6 +315,18 @@ export function ReminderCard({
               <Check className="h-4 w-4" />
             </button>
           )}
+          <button
+            onClick={handleToggleMute}
+            className={cn(
+              "rounded-lg p-1.5 transition-colors",
+              isMuted
+                ? "text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+            title={isMuted ? 'Activar notificaciones' : 'No recordar'}
+          >
+            {isMuted ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
           <button
             onClick={handleSnooze}
             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-500/10"

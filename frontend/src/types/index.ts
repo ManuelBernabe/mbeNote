@@ -12,6 +12,7 @@ export enum ReminderStatus {
   Completed = 1,
   Cancelled = 2,
   Snoozed = 3,
+  Muted = 4,
 }
 
 export enum NotificationChannel {

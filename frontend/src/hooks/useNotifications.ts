@@ -63,10 +63,25 @@ export function useMarkAllAsRead() {
 
 export function useDismissNotification() {
   const qc = useQueryClient();
+  const decrement = useNotificationStore((s) => s.decrement);
 
   return useMutation({
     mutationFn: (id: number) => api.dismissNotification(String(id)),
     onSuccess: () => {
+      decrement();
+      qc.invalidateQueries({ queryKey: KEYS.all });
+    },
+  });
+}
+
+export function useDeleteAllNotifications() {
+  const qc = useQueryClient();
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+
+  return useMutation({
+    mutationFn: () => api.deleteAllNotifications(),
+    onSuccess: () => {
+      setUnreadCount(0);
       qc.invalidateQueries({ queryKey: KEYS.all });
     },
   });

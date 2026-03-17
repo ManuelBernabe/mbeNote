@@ -13,7 +13,8 @@ public enum ReminderStatus
     Active = 0,
     Completed = 1,
     Cancelled = 2,
-    Snoozed = 3
+    Snoozed = 3,
+    Muted = 4
 }
 
 [Flags]

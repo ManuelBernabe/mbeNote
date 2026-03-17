@@ -14,6 +14,8 @@ public interface IReminderService
     Task<ReminderResponse> SnoozeAsync(int userId, int id, int minutes);
     Task<ReminderResponse> RestoreAsync(int userId, int id);
     Task<ReminderResponse> DuplicateAsync(int userId, int id);
+    Task<ReminderResponse> MuteAsync(int userId, int id);
+    Task<ReminderResponse> UnmuteAsync(int userId, int id);
     Task<IReadOnlyList<ReminderResponse>> GetUpcomingAsync(int userId, int count = 5);
     Task<IReadOnlyList<ReminderResponse>> GetOverdueAsync(int userId);
     Task<IReadOnlyList<ReminderResponse>> CheckConflictsAsync(int userId, DateTime start, DateTime end);
@@ -49,6 +51,8 @@ public interface INotificationService
     Task MarkAsReadAsync(int userId, int notificationId);
     Task MarkAllAsReadAsync(int userId);
     Task DismissAsync(int userId, int notificationId);
+    Task DeleteNotificationAsync(int userId, int notificationId);
+    Task DeleteAllNotificationsAsync(int userId);
 }
 
 public interface ICategoryService

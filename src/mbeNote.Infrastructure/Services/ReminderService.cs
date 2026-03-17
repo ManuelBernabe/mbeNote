@@ -175,6 +175,26 @@ public class ReminderService : IReminderService
         return await MapToResponseAsync(reminder);
     }
 
+    public async Task<ReminderResponse> MuteAsync(int userId, int id)
+    {
+        var reminder = await GetOwnedReminderAsync(userId, id);
+        reminder.Status = ReminderStatus.Muted;
+        reminder.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await _notifications.CancelForReminderAsync(reminder.Id);
+        return await MapToResponseAsync(reminder);
+    }
+
+    public async Task<ReminderResponse> UnmuteAsync(int userId, int id)
+    {
+        var reminder = await GetOwnedReminderAsync(userId, id);
+        reminder.Status = ReminderStatus.Active;
+        reminder.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await _notifications.ScheduleForReminderAsync(reminder);
+        return await MapToResponseAsync(reminder);
+    }
+
     public async Task<ReminderResponse> RestoreAsync(int userId, int id)
     {
         var reminder = await _db.Reminders

@@ -58,6 +58,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<INaturalLanguageParserService, NaturalLanguageParserService>();
 builder.Services.AddScoped<WebPushService>();
+builder.Services.AddScoped<EmailService>();
 
 // SignalR
 builder.Services.AddSignalR();
@@ -200,6 +201,18 @@ reminders.MapPost("/{id:int}/restore", async (int id, HttpContext ctx, IReminder
     catch (KeyNotFoundException) { return Results.NotFound(); }
 });
 
+reminders.MapPost("/{id:int}/mute", async (int id, HttpContext ctx, IReminderService svc) =>
+{
+    try { return Results.Ok(await svc.MuteAsync(GetUserId(ctx.User), id)); }
+    catch (KeyNotFoundException) { return Results.NotFound(); }
+});
+
+reminders.MapPost("/{id:int}/unmute", async (int id, HttpContext ctx, IReminderService svc) =>
+{
+    try { return Results.Ok(await svc.UnmuteAsync(GetUserId(ctx.User), id)); }
+    catch (KeyNotFoundException) { return Results.NotFound(); }
+});
+
 reminders.MapPost("/{id:int}/duplicate", async (int id, HttpContext ctx, IReminderService svc) =>
 {
     try { return Results.Ok(await svc.DuplicateAsync(GetUserId(ctx.User), id)); }
@@ -256,7 +269,13 @@ notifications.MapPut("/read-all", async (HttpContext ctx, INotificationService s
 
 notifications.MapDelete("/{id:int}", async (int id, HttpContext ctx, INotificationService svc) =>
 {
-    await svc.DismissAsync(GetUserId(ctx.User), id);
+    await svc.DeleteNotificationAsync(GetUserId(ctx.User), id);
+    return Results.NoContent();
+});
+
+notifications.MapDelete("/all", async (HttpContext ctx, INotificationService svc) =>
+{
+    await svc.DeleteAllNotificationsAsync(GetUserId(ctx.User));
     return Results.NoContent();
 });
 

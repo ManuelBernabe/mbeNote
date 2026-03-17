@@ -151,6 +151,26 @@ public class NotificationService : INotificationService
         }
     }
 
+    public async Task DeleteNotificationAsync(int userId, int notificationId)
+    {
+        var notification = await _db.ReminderNotifications
+            .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId);
+        if (notification != null)
+        {
+            _db.ReminderNotifications.Remove(notification);
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteAllNotificationsAsync(int userId)
+    {
+        var all = await _db.ReminderNotifications
+            .Where(n => n.UserId == userId && n.SentAt != null)
+            .ToListAsync();
+        _db.ReminderNotifications.RemoveRange(all);
+        await _db.SaveChangesAsync();
+    }
+
     private static string FormatOffset(int minutes)
     {
         if (minutes < 60) return $"{minutes} minutos";

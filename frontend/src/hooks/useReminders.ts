@@ -134,3 +134,25 @@ export function useCheckConflicts() {
     mutationFn: (data: ConflictCheckRequest) => api.checkConflicts(data),
   });
 }
+
+export function useMuteReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.muteReminder(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: KEYS.lists() });
+      qc.invalidateQueries({ queryKey: KEYS.detail(id) });
+    },
+  });
+}
+
+export function useUnmuteReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.unmuteReminder(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: KEYS.lists() });
+      qc.invalidateQueries({ queryKey: KEYS.detail(id) });
+    },
+  });
+}

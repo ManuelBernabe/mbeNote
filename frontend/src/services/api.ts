@@ -239,6 +239,20 @@ export async function dismissNotification(id: string): Promise<void> {
   return apiFetch(`/notifications/${id}`, { method: "DELETE" });
 }
 
+export async function deleteAllNotifications(): Promise<void> {
+  return apiFetch("/notifications/all", { method: "DELETE" });
+}
+
+// ── Reminder Mute/Unmute ────────────────────────────────────────────────────
+
+export async function muteReminder(id: string): Promise<ReminderResponse> {
+  return apiFetch(`/reminders/${id}/mute`, { method: "POST" });
+}
+
+export async function unmuteReminder(id: string): Promise<ReminderResponse> {
+  return apiFetch(`/reminders/${id}/unmute`, { method: "POST" });
+}
+
 // ── History ────────────────────────────────────────────────────────────────────
 
 export async function getReminderHistory(
