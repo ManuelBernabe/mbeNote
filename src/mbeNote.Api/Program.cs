@@ -126,6 +126,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 
+// Health check endpoint
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
 // Helper to get userId from claims
 static int GetUserId(ClaimsPrincipal user) =>
     int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)!.Value);

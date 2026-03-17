@@ -6,7 +6,7 @@
   },
   "deploy": {
     "startCommand": "dotnet mbeNote.Api.dll",
-    "healthcheckPath": "/api/auth/login",
+    "healthcheckPath": "/api/health",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
