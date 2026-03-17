@@ -6,41 +6,119 @@ import { useNotificationStore } from '../../../stores/notificationStore';
 import { NotificationDropdown } from './NotificationDropdown';
 import { toast } from 'sonner';
 
-function getPermission(): 'granted' | 'denied' | 'default' | 'unsupported' {
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+async function getVapidPublicKey(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/push/vapid-public-key');
+    const data = await res.json();
+    return data.key;
+  } catch {
+    return null;
+  }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    return reg;
+  } catch (err) {
+    console.error('[SW] Registration failed:', err);
+    return null;
+  }
+}
+
+async function subscribeToPush(reg: ServiceWorkerRegistration, vapidKey: string): Promise<PushSubscription | null> {
+  try {
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
+    });
+    return sub;
+  } catch (err) {
+    console.error('[Push] Subscribe failed:', err);
+    return null;
+  }
+}
+
+async function sendSubscriptionToServer(sub: PushSubscription): Promise<void> {
+  const token = localStorage.getItem('token');
+  const key = sub.getKey('p256dh');
+  const auth = sub.getKey('auth');
+  if (!key || !auth) return;
+
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      endpoint: sub.endpoint,
+      p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
+      auth: btoa(String.fromCharCode(...new Uint8Array(auth))),
+    }),
+  });
+}
+
+function getPermissionState(): 'granted' | 'denied' | 'default' | 'unsupported' {
+  if (typeof window === 'undefined') return 'unsupported';
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
   return Notification.permission;
 }
 
 export function NotificationBell() {
   const { unreadCount } = useNotificationStore();
   const [open, setOpen] = useState(false);
-  const [permission, setPermission] = useState<ReturnType<typeof getPermission>>('default');
+  const [permission, setPermission] = useState<ReturnType<typeof getPermissionState>>('default');
+  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Check permission on mount and when window regains focus (user may change in browser settings)
   useEffect(() => {
-    setPermission(getPermission());
-    const onFocus = () => setPermission(getPermission());
+    setPermission(getPermissionState());
+    const onFocus = () => setPermission(getPermissionState());
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  // Close dropdown on click outside
+  // Auto-register if already granted (e.g. returning user)
+  useEffect(() => {
+    if (permission === 'granted') {
+      (async () => {
+        const reg = await registerServiceWorker();
+        if (!reg) return;
+        const existingSub = await reg.pushManager.getSubscription();
+        if (existingSub) {
+          await sendSubscriptionToServer(existingSub);
+        }
+      })();
+    }
+  }, [permission]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleToggleNotifications = async () => {
+  const handleToggle = async () => {
     if (permission === 'unsupported') {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (isIOS) {
-        toast.info('En iPhone/iPad: pulsa "Compartir" → "Añadir a pantalla de inicio" para recibir notificaciones push', { duration: 8000 });
+        toast.info('En iPhone: pulsa "Compartir" → "Añadir a pantalla de inicio" y abre desde ahí para recibir notificaciones', { duration: 8000 });
       } else {
         toast.error('Tu navegador no soporta notificaciones push');
       }
@@ -48,30 +126,51 @@ export function NotificationBell() {
     }
 
     if (permission === 'granted') {
-      toast.info('Para desactivar las notificaciones, hazlo desde la configuración del navegador (candado en la barra de dirección)');
+      toast.success('Las notificaciones push ya están activadas');
       return;
     }
 
     if (permission === 'denied') {
-      toast.error('Las notificaciones están bloqueadas. Haz clic en el candado 🔒 de la barra de dirección para cambiar el permiso.');
+      toast.error('Notificaciones bloqueadas. Haz clic en el 🔒 de la barra de dirección → Permisos → Notificaciones → Permitir', { duration: 8000 });
       return;
     }
 
-    // permission === 'default' - ask for permission
+    // Request permission and subscribe
+    setLoading(true);
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
-      if (result === 'granted') {
-        toast.success('Notificaciones push activadas');
-        new Notification('🔔 mbeNote', {
-          body: 'Las notificaciones push están activadas. Recibirás avisos aquí.',
-          icon: '/favicon.svg',
-        });
-      } else {
-        toast.error('Permiso denegado. Puedes cambiarlo desde el candado 🔒 en la barra de dirección.');
+
+      if (result !== 'granted') {
+        toast.error('Permiso denegado');
+        return;
       }
-    } catch {
-      toast.error('Error al solicitar permisos de notificación');
+
+      const vapidKey = await getVapidPublicKey();
+      if (!vapidKey) {
+        toast.error('Error al obtener clave del servidor');
+        return;
+      }
+
+      const reg = await registerServiceWorker();
+      if (!reg) {
+        toast.error('Error al registrar el Service Worker');
+        return;
+      }
+
+      const sub = await subscribeToPush(reg, vapidKey);
+      if (!sub) {
+        toast.error('Error al suscribirse a notificaciones');
+        return;
+      }
+
+      await sendSubscriptionToServer(sub);
+      toast.success('¡Notificaciones push activadas! Recibirás avisos incluso con el navegador cerrado.');
+    } catch (err) {
+      console.error('[Push] Setup error:', err);
+      toast.error('Error al configurar notificaciones');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,18 +179,13 @@ export function NotificationBell() {
 
   return (
     <div ref={ref} className="relative flex items-center gap-1.5">
-      {/* Notification toggle button - ALWAYS visible */}
       <button
-        onClick={handleToggleNotifications}
-        title={
-          isActive
-            ? 'Notificaciones push activadas'
-            : isDenied
-              ? 'Notificaciones bloqueadas - clic para info'
-              : 'Activar notificaciones push'
-        }
+        onClick={handleToggle}
+        disabled={loading}
+        title={isActive ? 'Notificaciones push activadas' : isDenied ? 'Notificaciones bloqueadas' : 'Activar notificaciones push'}
         className={cn(
           'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all',
+          loading && 'opacity-50 cursor-wait',
           isActive
             ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
             : isDenied
@@ -100,24 +194,14 @@ export function NotificationBell() {
         )}
       >
         {isActive ? (
-          <>
-            <BellRing className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Push ON</span>
-          </>
+          <><BellRing className="h-3.5 w-3.5" /><span className="hidden sm:inline">Push ON</span></>
         ) : isDenied ? (
-          <>
-            <BellOff className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Bloqueado</span>
-          </>
+          <><BellOff className="h-3.5 w-3.5" /><span className="hidden sm:inline">Bloqueado</span></>
         ) : (
-          <>
-            <BellRing className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Activar push</span>
-          </>
+          <><BellRing className="h-3.5 w-3.5" /><span className="hidden sm:inline">{loading ? 'Activando...' : 'Activar push'}</span></>
         )}
       </button>
 
-      {/* Bell icon with unread badge */}
       <button
         onClick={() => setOpen(!open)}
         className={cn(

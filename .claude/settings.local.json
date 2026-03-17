@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/sonim/mbeNote/src -type f \\\\\\(-name *.cs -o -name *.ts -o -name *.js \\\\\\))",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

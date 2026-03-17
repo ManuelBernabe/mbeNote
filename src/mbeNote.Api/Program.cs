@@ -57,6 +57,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<INaturalLanguageParserService, NaturalLanguageParserService>();
+builder.Services.AddScoped<WebPushService>();
 
 // SignalR
 builder.Services.AddSignalR();
@@ -295,6 +296,26 @@ analytics.MapGet("/streaks", async (HttpContext ctx, IAnalyticsService svc) =>
 analytics.MapGet("/category-distribution", async (HttpContext ctx, IAnalyticsService svc) =>
     Results.Ok(await svc.GetCategoryDistributionAsync(GetUserId(ctx.User))));
 
+// ==================== PUSH SUBSCRIPTIONS ====================
+app.MapGet("/api/push/vapid-public-key", (IConfiguration config) =>
+    Results.Ok(new { key = config["Vapid:PublicKey"] }));
+
+app.MapPost("/api/push/subscribe", async (HttpContext ctx, WebPushService svc) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<PushSubscribeRequest>();
+    if (body == null) return Results.BadRequest();
+    await svc.SaveSubscriptionAsync(GetUserId(ctx.User), body.Endpoint, body.P256dh, body.Auth);
+    return Results.Ok();
+}).RequireAuthorization();
+
+app.MapPost("/api/push/unsubscribe", async (HttpContext ctx, WebPushService svc) =>
+{
+    var body = await ctx.Request.ReadFromJsonAsync<PushUnsubscribeRequest>();
+    if (body == null) return Results.BadRequest();
+    await svc.RemoveSubscriptionAsync(GetUserId(ctx.User), body.Endpoint);
+    return Results.Ok();
+}).RequireAuthorization();
+
 // ==================== SIGNALR ====================
 app.MapHub<NotificationHub>("/hubs/notifications");
 
@@ -302,3 +323,6 @@ app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+record PushSubscribeRequest(string Endpoint, string P256dh, string Auth);
+record PushUnsubscribeRequest(string Endpoint);

@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<ReminderHistory> ReminderHistory => Set<ReminderHistory>();
     public DbSet<ReminderTemplate> ReminderTemplates => Set<ReminderTemplate>();
     public DbSet<CalendarConnection> CalendarConnections => Set<CalendarConnection>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +104,16 @@ public class AppDbContext : DbContext
             e.Property(c => c.EncryptedAccessToken).HasMaxLength(2000);
             e.Property(c => c.EncryptedRefreshToken).HasMaxLength(2000);
             e.Property(c => c.CalendarId).HasMaxLength(256);
+        });
+
+        // PushSubscription
+        modelBuilder.Entity<PushSubscription>(e =>
+        {
+            e.HasIndex(p => new { p.UserId, p.Endpoint }).IsUnique();
+            e.Property(p => p.Endpoint).HasMaxLength(500);
+            e.Property(p => p.P256dh).HasMaxLength(500);
+            e.Property(p => p.Auth).HasMaxLength(500);
+            e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId);
         });
 
         SeedData(modelBuilder);
