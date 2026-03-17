@@ -19,6 +19,7 @@ import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
 import { useSignalR } from '../hooks/useSignalR';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
+import { IOSInstallBanner } from '../components/shared/IOSInstallBanner';
 
 function getUserFromStorage(): { displayName: string; email: string } {
   try {
@@ -316,6 +317,9 @@ export function RootLayout() {
           </div>
         </main>
       </div>
+
+      {/* iOS PWA install banner */}
+      <IOSInstallBanner />
     </div>
   );
 }
