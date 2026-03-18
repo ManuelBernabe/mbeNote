@@ -14,24 +14,42 @@ public class WebPushService
     private readonly PushServiceClient _pushClient;
     private readonly ILogger<WebPushService> _logger;
 
+    private readonly bool _isConfigured;
+
     public WebPushService(AppDbContext db, IConfiguration config, ILogger<WebPushService> logger)
     {
         _db = db;
         _logger = logger;
 
-        var vapidSubject = config["Vapid:Subject"] ?? "mailto:admin@mbenote.app";
         var vapidPublicKey = config["Vapid:PublicKey"] ?? "";
         var vapidPrivateKey = config["Vapid:PrivateKey"] ?? "";
 
         _pushClient = new PushServiceClient();
-        _pushClient.DefaultAuthentication = new VapidAuthentication(vapidPublicKey, vapidPrivateKey)
+
+        if (!string.IsNullOrWhiteSpace(vapidPublicKey) && !string.IsNullOrWhiteSpace(vapidPrivateKey))
         {
-            Subject = vapidSubject
-        };
+            var vapidSubject = config["Vapid:Subject"] ?? "mailto:admin@mbenote.app";
+            _pushClient.DefaultAuthentication = new VapidAuthentication(vapidPublicKey, vapidPrivateKey)
+            {
+                Subject = vapidSubject
+            };
+            _isConfigured = true;
+        }
+        else
+        {
+            _logger.LogWarning("VAPID keys not configured, web push notifications disabled");
+            _isConfigured = false;
+        }
     }
 
     public async Task SendToUserAsync(int userId, string title, string body, string? url = null)
     {
+        if (!_isConfigured)
+        {
+            _logger.LogDebug("Web push not configured, skipping");
+            return;
+        }
+
         var subscriptions = await _db.PushSubscriptions
             .Where(s => s.UserId == userId)
             .ToListAsync();
@@ -54,6 +72,12 @@ public class WebPushService
 
         foreach (var sub in subscriptions)
         {
+            if (string.IsNullOrEmpty(sub.Endpoint) || string.IsNullOrEmpty(sub.P256dh) || string.IsNullOrEmpty(sub.Auth))
+            {
+                _logger.LogWarning("Invalid push subscription for user {UserId}, skipping", userId);
+                continue;
+            }
+
             try
             {
                 var pushSubscription = new PushSubscription
