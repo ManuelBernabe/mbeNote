@@ -67,7 +67,10 @@ public class WebPushService
             icon = "/favicon.svg",
             badge = "/favicon.svg",
             url = url ?? "/reminders",
-            timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds()
+            tag = $"mbenote-{DateTimeOffset.Now.ToUnixTimeMilliseconds()}",
+            timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds(),
+            requireInteraction = true,
+            persistent = true
         });
 
         foreach (var sub in subscriptions)
