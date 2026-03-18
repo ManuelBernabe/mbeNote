@@ -1,5 +1,6 @@
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,7 @@ public class EmailService
 {
     private readonly IConfiguration _config;
     private readonly ILogger<EmailService> _logger;
+    private static readonly HttpClient _http = new();
 
     public EmailService(IConfiguration config, ILogger<EmailService> logger)
     {
@@ -18,28 +20,18 @@ public class EmailService
 
     public async Task SendReminderEmailAsync(string toEmail, string subject, string reminderTitle, DateTime reminderTime, string? description)
     {
-        var host = _config["Smtp:Host"];
-        if (string.IsNullOrEmpty(host))
+        var apiKey = _config["Resend:ApiKey"];
+        if (string.IsNullOrEmpty(apiKey))
         {
-            _logger.LogWarning("SMTP not configured, skipping email notification");
+            _logger.LogDebug("Resend API key not configured, skipping email");
             return;
         }
 
+        var fromEmail = _config["Resend:FromEmail"] ?? "mbeNote <onboarding@resend.dev>";
+
         try
         {
-            var port = int.Parse(_config["Smtp:Port"] ?? "587");
-            var username = _config["Smtp:Username"] ?? "";
-            var password = _config["Smtp:Password"] ?? "";
-            var fromEmail = _config["Smtp:FromEmail"] ?? "avisos@mbenote.app";
-            var fromName = _config["Smtp:FromName"] ?? "mbeNote";
-
-            using var client = new SmtpClient(host, port)
-            {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(username, password)
-            };
-
-            var body = $@"
+            var htmlBody = $@"
 <div style=""font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;"">
   <div style=""background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 12px; padding: 24px; color: white; text-align: center; margin-bottom: 20px;"">
     <h1 style=""margin: 0; font-size: 20px;"">mbeNote</h1>
@@ -57,21 +49,35 @@ public class EmailService
   </p>
 </div>";
 
-            var message = new MailMessage
+            var payload = JsonSerializer.Serialize(new
             {
-                From = new MailAddress(fromEmail, fromName),
-                Subject = $"Recordatorio: {subject}",
-                Body = body,
-                IsBodyHtml = true
-            };
-            message.To.Add(toEmail);
+                from = fromEmail,
+                to = new[] { toEmail },
+                subject = $"Recordatorio: {subject}",
+                html = htmlBody
+            });
 
-            await client.SendMailAsync(message);
-            _logger.LogInformation("Email notification sent to {Email} for reminder: {Title}", toEmail, reminderTitle);
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails")
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+            var response = await _http.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Email sent to {Email} for: {Title}", toEmail, reminderTitle);
+            }
+            else
+            {
+                _logger.LogError("Resend API error {Status}: {Body}", response.StatusCode, responseBody);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email notification to {Email}", toEmail);
+            _logger.LogError(ex, "Failed to send email to {Email}", toEmail);
         }
     }
 }

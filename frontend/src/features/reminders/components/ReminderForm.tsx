@@ -41,6 +41,7 @@ const priorityOptions = [
 ];
 
 const notificationPresets = [
+  { value: 0, label: 'No recordar' },
   { value: 5, label: '5 min' },
   { value: 15, label: '15 min' },
   { value: 30, label: '30 min' },
@@ -108,8 +109,8 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
         categoryId: data.categoryId ? parseInt(data.categoryId, 10) : null,
         location: data.location || null,
         recurrenceRule: data.recurrenceRule || null,
-        notificationOffsets: JSON.stringify([data.notifyMinutesBefore]),
-        notificationChannels: NotificationChannel.InApp,
+        notificationOffsets: data.notifyMinutesBefore > 0 ? JSON.stringify([data.notifyMinutesBefore]) : '[]',
+        notificationChannels: data.notifyMinutesBefore > 0 ? NotificationChannel.InApp : 0,
       };
 
       if (isEditing && reminder) {
