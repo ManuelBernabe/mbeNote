@@ -82,9 +82,10 @@ public class WebPushService
             {
                 var pushSubscription = new PushSubscription
                 {
-                    Endpoint = sub.Endpoint,
-                    Keys = { ["p256dh"] = sub.P256dh, ["auth"] = sub.Auth }
+                    Endpoint = sub.Endpoint
                 };
+                pushSubscription.SetKey(PushEncryptionKeyName.P256DH, sub.P256dh);
+                pushSubscription.SetKey(PushEncryptionKeyName.Auth, sub.Auth);
 
                 var message = new PushMessage(payload)
                 {
