@@ -87,27 +87,24 @@ public class ReminderNotificationJob : IJob
                 logger.LogWarning(ex, "Web Push failed for notification {Id}", notification.Id);
             }
 
-            // 3. Send via Email (works always, especially on iPhone)
-            if (notification.Channel.HasFlag(NotificationChannel.Email))
+            // 3. Send via Email (always send as reliable fallback for iPhone)
+            try
             {
-                try
+                var user = await db.Users.FindAsync(notification.UserId);
+                if (user != null)
                 {
-                    var user = await db.Users.FindAsync(notification.UserId);
-                    if (user != null)
-                    {
-                        await emailService.SendReminderEmailAsync(
-                            user.Email,
-                            title,
-                            title,
-                            reminderTime,
-                            notification.Reminder?.Description
-                        );
-                    }
+                    await emailService.SendReminderEmailAsync(
+                        user.Email,
+                        title,
+                        title,
+                        reminderTime,
+                        notification.Reminder?.Description
+                    );
                 }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Email send failed for notification {Id}", notification.Id);
-                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Email send failed for notification {Id}", notification.Id);
             }
 
             // Update unread count via SignalR
