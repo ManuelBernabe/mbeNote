@@ -54,7 +54,17 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title, options).then(() => {
+      // Update the app icon badge with the unread count
+      if ('setAppBadge' in navigator) {
+        const count = data.badgeCount;
+        if (count != null && count > 0) {
+          navigator.setAppBadge(count).catch(() => {});
+        } else {
+          navigator.setAppBadge().catch(() => {});
+        }
+      }
+    })
   );
 });
 

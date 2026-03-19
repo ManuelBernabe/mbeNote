@@ -77,6 +77,10 @@ public class ReminderNotificationJob : IJob
                 logger.LogWarning(ex, "SignalR failed for notification {Id}", notification.Id);
             }
 
+            // Compute unread count (used by both push badge and SignalR)
+            var unreadCount = await db.ReminderNotifications
+                .CountAsync(n => n.UserId == notification.UserId && n.SentAt != null && n.ReadAt == null && n.DismissedAt == null);
+
             // 2. Web Push (desktop + iPhone PWA)
             try
             {
@@ -90,7 +94,8 @@ public class ReminderNotificationJob : IJob
                     title,
                     pushBody,
                     $"/reminders?open={notification.ReminderId}",
-                    reminderTime
+                    reminderTime,
+                    unreadCount
                 );
             }
             catch (Exception ex)
@@ -117,10 +122,6 @@ public class ReminderNotificationJob : IJob
             {
                 logger.LogWarning(ex, "Email failed for notification {Id}", notification.Id);
             }
-
-            // Update unread count
-            var unreadCount = await db.ReminderNotifications
-                .CountAsync(n => n.UserId == notification.UserId && n.SentAt != null && n.ReadAt == null && n.DismissedAt == null);
 
             await hubContext.Clients.Group($"user-{notification.UserId}")
                 .SendAsync("NotificationCountUpdated", unreadCount);

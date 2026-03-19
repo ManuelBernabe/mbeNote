@@ -42,7 +42,7 @@ public class WebPushService
         }
     }
 
-    public async Task SendToUserAsync(int userId, string title, string body, string? url = null, DateTime? scheduledAt = null)
+    public async Task SendToUserAsync(int userId, string title, string body, string? url = null, DateTime? scheduledAt = null, int? badgeCount = null)
     {
         if (!_isConfigured)
         {
@@ -72,7 +72,8 @@ public class WebPushService
                 ? new DateTimeOffset(scheduledAt.Value, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : DateTimeOffset.Now.ToUnixTimeMilliseconds(),
             requireInteraction = true,
-            persistent = true
+            persistent = true,
+            badgeCount
         });
 
         foreach (var sub in subscriptions)

@@ -4,5 +4,19 @@
       "Bash(find /c/Users/sonim/mbeNote/src -type f \\\\\\(-name *.cs -o -name *.ts -o -name *.js \\\\\\))",
       "Bash(xargs grep:*)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /c/Users/sonim/mbeNote/scripts/deploy.sh",
+            "timeout": 180,
+            "statusMessage": "Ejecutando tests y desplegando en Railway..."
+          }
+        ]
+      }
+    ]
   }
 }
