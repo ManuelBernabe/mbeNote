@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, LayoutGrid, List, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
-import { useReminders } from '../../hooks/useReminders';
+import { useReminders, useReminder } from '../../hooks/useReminders';
 import { cn } from '../../lib/utils';
 import type { ReminderResponse } from '../../types';
 import { ReminderStatus, ReminderPriority } from '../../types';
@@ -22,17 +22,16 @@ export function RemindersPage() {
   const [editingReminder, setEditingReminder] = useState<ReminderResponse | null>(null);
   const [detailReminder, setDetailReminder] = useState<ReminderResponse | null>(null);
 
-  // Auto-open reminder detail when navigated from a push notification (?open=ID)
+  // Fetch reminder by ID when navigated from a push notification (?open=ID)
+  const openId = searchParams.get('open') ?? '';
+  const { data: openedReminder } = useReminder(openId);
+
   useEffect(() => {
-    const openId = searchParams.get('open');
-    if (openId && reminders.length > 0) {
-      const target = reminders.find((r) => String(r.id) === openId);
-      if (target) {
-        setDetailReminder(target);
-        setSearchParams({}, { replace: true });
-      }
+    if (openedReminder) {
+      setDetailReminder(openedReminder);
+      setSearchParams({}, { replace: true });
     }
-  }, [searchParams, reminders]);
+  }, [openedReminder]);
 
   // Filters
   const [search, setSearch] = useState('');
