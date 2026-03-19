@@ -72,19 +72,36 @@ function NotificationClickHandler() {
 
     consumePending(); // Check on mount (app opened from closed state)
 
-    // Check when app becomes visible again (iOS background → foreground)
+    // visibilitychange: iOS background → foreground
     const onVisible = () => { if (document.visibilityState === 'visible') consumePending(); };
-    // Also check on focus — covers the case where the app was already visible
-    // (visibilitychange doesn't fire) but the user tapped a notification
+    // focus: app was already visible when notification was tapped (visibilitychange doesn't fire)
+    // pageshow: iOS restores app from bfcache/background suspension — fires reliably on iOS PWA
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) consumePending(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', consumePending);
+    window.addEventListener('pageshow', onPageShow);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', consumePending);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, [handleNotificationUrl]);
 
-  // Fast-path: postMessage (works if listener is already up when message arrives)
+  // BroadcastChannel: most reliable SW→page messaging on iOS Safari 15.4+
+  // (SW broadcasts; if page JS is running, this arrives even after SW message port closes)
+  useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('mbenote-nav');
+      bc.onmessage = (event: MessageEvent) => {
+        if (event.data?.type !== 'NOTIFICATION_CLICK') return;
+        handleNotificationUrl(event.data.url || '/reminders');
+      };
+    } catch { /* BroadcastChannel not supported */ }
+    return () => { try { bc?.close(); } catch { /* ignore */ } };
+  }, [handleNotificationUrl]);
+
+  // Fast-path: SW postMessage (works if listener is already up when message arrives)
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event: MessageEvent) => {

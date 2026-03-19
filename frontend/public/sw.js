@@ -82,7 +82,8 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   event.waitUntil(
-    // 1. Store the target URL in Cache API (shared between SW and page, no timing issues)
+    // 1. Always write to Cache API first — this is the most reliable mechanism on iOS
+    //    because it survives JS suspension and app-open-from-closed-state timing gaps.
     caches.open('mbenote-pending').then(cache =>
       cache.put('nav', new Response(url))
     ).then(() =>
@@ -91,24 +92,24 @@ self.addEventListener('notificationclick', (event) => {
       const appClient = clientList.find(c => c.url.startsWith(self.location.origin));
 
       if (appClient) {
-        // Use navigate() to directly change the URL in the existing window (most reliable).
-        // This works even if the app was already focused/visible so visibilitychange
-        // doesn't fire, and avoids any postMessage delivery race conditions.
-        if (appClient.navigate) {
-          return appClient.navigate(new URL(url, self.location.origin).href)
-            .then(client => client ? client.focus() : null)
-            .catch(() => {
-              // navigate() not supported or failed — fall back to postMessage
-              appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
-              return appClient.focus();
-            });
-        }
-        // Fallback for browsers without WindowClient.navigate()
-        appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
+        // 2. BroadcastChannel — more reliable than postMessage on iOS Safari PWA
+        //    (Safari 15.4+ supported; shared channel lets the page receive even after SW
+        //    has already closed its message port)
+        try {
+          new BroadcastChannel('mbenote-nav').postMessage({ type: 'NOTIFICATION_CLICK', url });
+        } catch (e) { /* BroadcastChannel not supported */ }
+
+        // 3. postMessage as fast-path fallback (works when page JS is still running)
+        //    NOTE: do NOT use WindowClient.navigate() — it causes a full page reload,
+        //    returns null for uncontrolled clients (silent failure), and is unsupported
+        //    on iOS Safari PWA.
+        try { appClient.postMessage({ type: 'NOTIFICATION_CLICK', url }); } catch (e) {}
+
         return appClient.focus();
       }
 
-      // App was closed — open with the full absolute URL
+      // App was closed — open with the full absolute URL.
+      // The page will read the pending URL from Cache API on mount.
       return clients.openWindow(new URL(url, self.location.origin).href);
     })
   );
