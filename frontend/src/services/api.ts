@@ -228,11 +228,11 @@ export async function getUnreadCount(): Promise<number> {
 export async function markNotificationAsRead(
   id: string,
 ): Promise<void> {
-  return apiFetch(`/notifications/${id}/read`, { method: "POST" });
+  return apiFetch(`/notifications/${id}/read`, { method: "PUT" });
 }
 
 export async function markAllNotificationsAsRead(): Promise<void> {
-  return apiFetch("/notifications/read-all", { method: "POST" });
+  return apiFetch("/notifications/read-all", { method: "PUT" });
 }
 
 export async function dismissNotification(id: string): Promise<void> {

@@ -16,6 +16,8 @@ import {
 import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
 import { useSignalR } from '../hooks/useSignalR';
+import { useNotificationStore } from '../stores/notificationStore';
+import { markAllNotificationsAsRead } from '../services/api';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
 import { IOSInstallBanner } from '../components/shared/IOSInstallBanner';
 import { UpdateBanner } from '../components/shared/UpdateBanner';
@@ -76,6 +78,26 @@ export function RootLayout() {
   const user = useMemo(() => getUserFromStorage(), []);
 
   useSignalR();
+
+  const { setUnreadCount } = useNotificationStore();
+
+  // Clear badge and mark all notifications as read whenever the app becomes visible
+  useEffect(() => {
+    const clearBadge = async () => {
+      try {
+        await markAllNotificationsAsRead();
+        setUnreadCount(0);
+      } catch { /* ignore */ }
+    };
+
+    clearBadge(); // On mount (app opened)
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') clearBadge();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [setUnreadCount]);
 
   const handleThemeToggle = useCallback(() => {
     const next = theme === 'dark' ? 'light' : 'dark';
