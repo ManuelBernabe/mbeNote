@@ -209,8 +209,11 @@ export function RootLayout() {
 
       {/* Mobile Bottom Tab Bar */}
       {isMobile && (
-        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95">
-          <div className="flex items-center justify-around px-2 pb-safe">
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95"
+          style={{ transform: 'translateZ(0)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="flex items-center">
             {tabItems.map((item) => {
               const isActive = item.to === '/'
                 ? location.pathname === '/'
@@ -220,10 +223,10 @@ export function RootLayout() {
                   key={item.to}
                   to={item.to}
                   end={item.to === '/'}
-                  className="flex flex-1 flex-col items-center gap-0.5 py-2"
+                  className="flex w-1/5 flex-col items-center gap-0.5 py-2"
                 >
-                  <item.icon className={cn('h-5 w-5 transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')} />
-                  <span className={cn('text-[10px] font-medium transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')}>
+                  <item.icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')} />
+                  <span className={cn('w-full truncate text-center text-[10px] font-medium transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')}>
                     {item.label}
                   </span>
                 </NavLink>
