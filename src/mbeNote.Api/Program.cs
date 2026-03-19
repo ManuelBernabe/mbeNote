@@ -146,6 +146,10 @@ app.UseStaticFiles(new StaticFileOptions
 // Health check endpoint
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
+// Version endpoint — returns server startup time (changes on every Railway deploy)
+var _startupTime = DateTime.UtcNow.ToString("O");
+app.MapGet("/api/version", () => Results.Ok(new { version = _startupTime }));
+
 // Helper to get userId from claims
 static int GetUserId(ClaimsPrincipal user) =>
     int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)!.Value);

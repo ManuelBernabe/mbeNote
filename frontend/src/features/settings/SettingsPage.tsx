@@ -481,9 +481,9 @@ export function SettingsPage() {
               <button
                 onClick={async () => {
                   setChecking(true);
-                  await checkForUpdate();
+                  const found = await checkForUpdate();
                   setChecking(false);
-                  if (!needsRefresh) toast.success('La app está al día');
+                  if (!found) toast.success('La app está al día');
                 }}
                 disabled={checking}
                 className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
