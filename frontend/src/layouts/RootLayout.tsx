@@ -210,7 +210,7 @@ export function RootLayout() {
         </header>
 
         {/* Page Content */}
-        <main className={cn('flex-1 overflow-y-auto', isMobile && 'pb-20')}>
+        <main className={cn('flex-1 overflow-y-auto', isMobile && 'pb-16')}>
           <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
             <Outlet />
           </div>
@@ -220,10 +220,10 @@ export function RootLayout() {
       {/* Mobile Bottom Tab Bar */}
       {isMobile && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95"
+          className="fixed bottom-0 left-0 right-0 z-40 shrink-0 border-t border-slate-200 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95"
           style={{ transform: 'translateZ(0)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <div className="flex items-center">
+          <div className="flex h-14 items-center">
             {tabItems.map((item) => {
               const isActive = item.to === '/'
                 ? location.pathname === '/'

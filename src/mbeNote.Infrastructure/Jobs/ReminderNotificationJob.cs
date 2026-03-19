@@ -41,7 +41,16 @@ public class ReminderNotificationJob : IJob
 
         // Mark ALL as sent immediately to prevent duplicate processing
         foreach (var n in pendingNotifications)
+        {
             n.SentAt = now;
+            // If the reminder was snoozed and its snooze time has now fired, reactivate it
+            if (n.Reminder?.Status == ReminderStatus.Snoozed)
+            {
+                n.Reminder.Status = ReminderStatus.Active;
+                n.Reminder.SnoozedUntil = null;
+                n.Reminder.UpdatedAt = now;
+            }
+        }
         await db.SaveChangesAsync();
 
         // Now send them (already marked as sent, so next job cycle won't re-pick them)
