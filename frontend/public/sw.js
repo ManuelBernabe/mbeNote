@@ -72,18 +72,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
+  if (event.action === 'dismiss') return;
+
   const url = event.notification.data?.url || '/reminders';
 
-  if (event.action === 'dismiss') return;
+  // Clear the badge immediately when user taps the notification
+  if ('clearAppBadge' in self.navigator) {
+    self.navigator.clearAppBadge().catch(() => {});
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
-          return client.focus();
-        }
+      const appClient = clientList.find(c => c.url.startsWith(self.location.origin));
+
+      if (appClient) {
+        // Send the target URL to the app via postMessage (more reliable than client.navigate on iOS)
+        appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
+        return appClient.focus();
       }
+
+      // App is closed — open a new window with the full URL
       return clients.openWindow(url);
     })
   );
