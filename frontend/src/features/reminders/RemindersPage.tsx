@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Plus, LayoutGrid, List, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
@@ -12,6 +12,39 @@ import { ReminderCard } from './components/ReminderCard';
 import { ReminderFilters } from './components/ReminderFilters';
 import { ReminderForm } from './components/ReminderForm';
 import { ReminderDetail } from './components/ReminderDetail';
+
+const FAB_KEY = 'mbenote_fab_pos';
+
+function DraggableFAB({ onClick }: { onClick: () => void }) {
+  const getSaved = () => {
+    try {
+      const s = localStorage.getItem(FAB_KEY);
+      return s ? JSON.parse(s) : { x: 0, y: 0 };
+    } catch { return { x: 0, y: 0 }; }
+  };
+  const saved = getSaved();
+  const x = useMotionValue(saved.x);
+  const y = useMotionValue(saved.y);
+  const dragging = useRef(false);
+
+  return (
+    <motion.button
+      drag
+      dragMomentum={false}
+      style={{ x, y }}
+      onDragStart={() => { dragging.current = true; }}
+      onDragEnd={() => {
+        localStorage.setItem(FAB_KEY, JSON.stringify({ x: x.get(), y: y.get() }));
+        setTimeout(() => { dragging.current = false; }, 50);
+      }}
+      onClick={() => { if (!dragging.current) onClick(); }}
+      className="fixed bottom-20 right-4 z-30 flex h-14 w-14 touch-none items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-95 md:bottom-6 md:right-6 md:hidden"
+      whileDrag={{ scale: 1.1 }}
+    >
+      <Plus className="h-6 w-6" />
+    </motion.button>
+  );
+}
 
 export function RemindersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -189,13 +222,8 @@ export function RemindersPage() {
         </motion.div>
       )}
 
-      {/* FAB for mobile */}
-      <button
-        onClick={() => setShowForm(true)}
-        className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-600 hover:shadow-xl active:scale-95 md:bottom-6 md:right-6 md:hidden"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      {/* Draggable FAB for mobile */}
+      <DraggableFAB onClick={() => setShowForm(true)} />
 
       {/* Form Modal */}
       <AnimatePresence>
