@@ -163,10 +163,23 @@ public class ReminderService : IReminderService
         var reminder = await GetOwnedReminderAsync(userId, id);
         var previousState = JsonSerializer.Serialize(reminder);
 
-        reminder.SnoozedUntil = DateTime.UtcNow.AddMinutes(minutes);
+        var snoozeUntil = DateTime.Now.AddMinutes(minutes);
+        reminder.SnoozedUntil = snoozeUntil;
         reminder.SnoozeCount++;
         reminder.Status = ReminderStatus.Snoozed;
         reminder.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        // Cancel any pending notifications and schedule a new one at snooze time
+        await _notifications.CancelForReminderAsync(reminder.Id);
+        _db.ReminderNotifications.Add(new Core.Models.ReminderNotification
+        {
+            ReminderId = reminder.Id,
+            UserId = reminder.UserId,
+            ScheduledAt = snoozeUntil,
+            Channel = reminder.NotificationChannels,
+            Message = $"🔔 {reminder.Title}"
+        });
         await _db.SaveChangesAsync();
 
         var newState = JsonSerializer.Serialize(reminder);

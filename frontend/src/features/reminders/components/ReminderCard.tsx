@@ -13,7 +13,7 @@ import { format, isPast, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
-import { useCompleteReminder, useSnoozeReminder, useDeleteReminder, useMuteReminder, useUnmuteReminder } from '../../../hooks/useReminders';
+import { useCompleteReminder, useDeleteReminder, useMuteReminder, useUnmuteReminder } from '../../../hooks/useReminders';
 import { ReminderPriority, ReminderStatus } from '../../../types';
 import type { ReminderResponse } from '../../../types';
 
@@ -64,7 +64,6 @@ export function ReminderCard({
   onRefresh,
 }: ReminderCardProps) {
   const completeMutation = useCompleteReminder();
-  const snoozeMutation = useSnoozeReminder();
   const deleteMutation = useDeleteReminder();
   const muteMutation = useMuteReminder();
   const unmuteMutation = useUnmuteReminder();
@@ -85,17 +84,9 @@ export function ReminderCard({
     }
   };
 
-  const handleSnooze = async (e: React.MouseEvent) => {
+  const handleSnooze = (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      await snoozeMutation.mutateAsync({
-        id: String(reminder.id),
-        data: { minutes: 15 },
-      });
-      toast.success('Pospuesto 15 minutos');
-    } catch {
-      toast.error('Error al posponer');
-    }
+    onDetail(); // Open detail modal where the full snooze picker is available
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
