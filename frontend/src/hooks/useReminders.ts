@@ -65,7 +65,7 @@ export function useDeleteReminder() {
   return useMutation({
     mutationFn: (id: string) => api.deleteReminder(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: KEYS.lists() });
+      qc.invalidateQueries({ queryKey: KEYS.all });
     },
   });
 }

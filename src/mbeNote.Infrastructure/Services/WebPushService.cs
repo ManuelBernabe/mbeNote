@@ -42,7 +42,7 @@ public class WebPushService
         }
     }
 
-    public async Task SendToUserAsync(int userId, string title, string body, string? url = null)
+    public async Task SendToUserAsync(int userId, string title, string body, string? url = null, DateTime? scheduledAt = null)
     {
         if (!_isConfigured)
         {
@@ -68,7 +68,9 @@ public class WebPushService
             badge = "/favicon.svg",
             url = url ?? "/reminders",
             tag = $"mbenote-{DateTimeOffset.Now.ToUnixTimeMilliseconds()}",
-            timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds(),
+            timestamp = scheduledAt.HasValue
+                ? new DateTimeOffset(scheduledAt.Value, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                : DateTimeOffset.Now.ToUnixTimeMilliseconds(),
             requireInteraction = true,
             persistent = true
         });

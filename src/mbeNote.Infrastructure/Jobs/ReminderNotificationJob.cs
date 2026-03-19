@@ -80,11 +80,17 @@ public class ReminderNotificationJob : IJob
             // 2. Web Push (desktop + iPhone PWA)
             try
             {
+                var reminderTimeFormatted = reminderTime.ToString("HH:mm");
+                var pushBody = string.IsNullOrWhiteSpace(notification.Reminder?.Description)
+                    ? $"⏰ {reminderTimeFormatted}"
+                    : $"{notification.Reminder.Description}\n⏰ {reminderTimeFormatted}";
+
                 await webPush.SendToUserAsync(
                     notification.UserId,
-                    $"Recordatorio: {title}",
-                    message,
-                    "/reminders"
+                    title,
+                    pushBody,
+                    "/reminders",
+                    reminderTime
                 );
             }
             catch (Exception ex)

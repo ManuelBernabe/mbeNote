@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
 import { useCategories } from '../../../hooks/useCategories';
 import { useCreateReminder, useUpdateReminder } from '../../../hooks/useReminders';
-import { ReminderPriority, NotificationChannel } from '../../../types';
+import { ReminderPriority, NotificationChannel, ReminderStatus } from '../../../types';
 import type { ReminderResponse } from '../../../types';
 import { RecurrenceBuilder } from './RecurrenceBuilder';
 
@@ -114,6 +114,13 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       };
 
       if (isEditing && reminder) {
+        // If the reminder was completed/cancelled, reactivate it with the new date
+        if (
+          reminder.status === ReminderStatus.Completed ||
+          reminder.status === ReminderStatus.Cancelled
+        ) {
+          payload.status = ReminderStatus.Active;
+        }
         await updateMutation.mutateAsync({ id: String(reminder.id), data: payload });
       } else {
         await createMutation.mutateAsync(payload);
@@ -159,6 +166,16 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
           className="max-h-[70vh] overflow-y-auto p-6"
         >
           <div className="space-y-4">
+            {/* Reactivation banner */}
+            {isEditing && reminder && (
+              reminder.status === ReminderStatus.Completed ||
+              reminder.status === ReminderStatus.Cancelled
+            ) && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                🔄 Al guardar con una nueva fecha, el aviso se <strong>reactivará</strong> automáticamente.
+              </div>
+            )}
+
             {/* Title */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
