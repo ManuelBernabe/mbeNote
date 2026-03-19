@@ -82,16 +82,21 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    // 1. Store the target URL in Cache API (shared between SW and page, no timing issues)
+    caches.open('mbenote-pending').then(cache =>
+      cache.put('nav', new Response(url))
+    ).then(() =>
+      clients.matchAll({ type: 'window', includeUncontrolled: true })
+    ).then((clientList) => {
       const appClient = clientList.find(c => c.url.startsWith(self.location.origin));
 
       if (appClient) {
-        // Send the target URL to the app via postMessage (more reliable than client.navigate on iOS)
+        // Also try postMessage as fast path (works if listener is already registered)
         appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
         return appClient.focus();
       }
 
-      // App is closed — open a new window with the full URL
+      // App was closed — open with the full URL directly in the address bar
       return clients.openWindow(url);
     })
   );

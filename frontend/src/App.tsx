@@ -40,29 +40,53 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Listens for NOTIFICATION_CLICK messages from the Service Worker
-// and navigates to the target URL (more reliable than client.navigate on iOS)
+// Handles navigation triggered by push notification taps.
+// Uses Cache API as the primary mechanism (no timing issues on iOS)
+// and postMessage as a fast-path fallback.
 function NotificationClickHandler() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+  const handleNotificationUrl = React.useCallback((raw: string) => {
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      navigate(parsed.pathname + parsed.search, { replace: false });
+    } catch {
+      navigate(raw, { replace: false });
+    }
+  }, [navigate]);
 
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type !== 'NOTIFICATION_CLICK') return;
-      const raw: string = event.data.url || '/reminders';
-      // Extract the path+search from the full or relative URL
+  // Primary: read pending URL from Cache API (written by SW, survives timing gaps)
+  useEffect(() => {
+    const consumePending = async () => {
+      if (!('caches' in window)) return;
       try {
-        const parsed = new URL(raw, window.location.origin);
-        navigate(parsed.pathname + parsed.search, { replace: false });
-      } catch {
-        navigate(raw, { replace: false });
-      }
+        const cache = await caches.open('mbenote-pending');
+        const r = await cache.match('nav');
+        if (!r) return;
+        const url = await r.text();
+        await cache.delete('nav');
+        handleNotificationUrl(url);
+      } catch { /* ignore */ }
     };
 
+    consumePending(); // Check on mount (app opened from closed state)
+
+    // Also check when app becomes visible again (iOS background → foreground)
+    const onVisible = () => { if (document.visibilityState === 'visible') consumePending(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [handleNotificationUrl]);
+
+  // Fast-path: postMessage (works if listener is already up when message arrives)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== 'NOTIFICATION_CLICK') return;
+      handleNotificationUrl(event.data.url || '/reminders');
+    };
     navigator.serviceWorker.addEventListener('message', handler);
     return () => navigator.serviceWorker.removeEventListener('message', handler);
-  }, [navigate]);
+  }, [handleNotificationUrl]);
 
   return null;
 }
