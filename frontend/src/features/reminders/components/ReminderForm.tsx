@@ -93,6 +93,11 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
   const watchNotifyMinutes = watch('notifyMinutesBefore');
   const watchIsAllDay = watch('isAllDay');
 
+  const isPastOrDone = isEditing && !!reminder && (
+    reminder.status === ReminderStatus.Completed ||
+    reminder.status === ReminderStatus.Cancelled
+  );
+
   const onSubmit = async (data: ReminderFormData) => {
     try {
       // Send datetime as-is (local time string) so the backend stores the user's intended time
@@ -114,11 +119,7 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       };
 
       if (isEditing && reminder) {
-        // If the reminder was completed/cancelled, reactivate it with the new date
-        if (
-          reminder.status === ReminderStatus.Completed ||
-          reminder.status === ReminderStatus.Cancelled
-        ) {
+        if (isPastOrDone) {
           payload.status = ReminderStatus.Active;
         }
         await updateMutation.mutateAsync({ id: String(reminder.id), data: payload });
@@ -167,10 +168,7 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
         >
           <div className="space-y-4">
             {/* Reactivation banner */}
-            {isEditing && reminder && (
-              reminder.status === ReminderStatus.Completed ||
-              reminder.status === ReminderStatus.Cancelled
-            ) && (
+            {isPastOrDone && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
                 🔄 Al guardar con una nueva fecha, el aviso se <strong>reactivará</strong> automáticamente.
               </div>
