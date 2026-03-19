@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Check,
   Clock,
@@ -11,11 +11,13 @@ import {
 } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
 import { useCompleteReminder, useDeleteReminder, useMuteReminder, useUnmuteReminder } from '../../../hooks/useReminders';
 import { ReminderPriority, ReminderStatus } from '../../../types';
 import type { ReminderResponse } from '../../../types';
+import { SnoozePickerModal } from './SnoozePickerModal';
 
 const priorityConfig: Record<number, { label: string; color: string; bg: string }> = {
   [ReminderPriority.Urgent]: {
@@ -68,6 +70,7 @@ export function ReminderCard({
   const muteMutation = useMuteReminder();
   const unmuteMutation = useUnmuteReminder();
   const isMuted = reminder.status === ReminderStatus.Muted;
+  const [showSnoozePicker, setShowSnoozePicker] = useState(false);
 
   const date = new Date(reminder.startDateTime);
   const isOverdue = isPast(date) && reminder.status === ReminderStatus.Active;
@@ -86,7 +89,7 @@ export function ReminderCard({
 
   const handleSnooze = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDetail(); // Open detail modal where the full snooze picker is available
+    setShowSnoozePicker(true);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -114,8 +117,23 @@ export function ReminderCard({
     }
   };
 
+  const snoozePicker = (
+    <AnimatePresence>
+      {showSnoozePicker && (
+        <SnoozePickerModal
+          reminderId={reminder.id}
+          reminderTitle={reminder.title}
+          onClose={() => setShowSnoozePicker(false)}
+          onSnoozed={onRefresh}
+        />
+      )}
+    </AnimatePresence>
+  );
+
   if (viewMode === 'list') {
     return (
+      <>
+        {snoozePicker}
       <div
         onClick={onDetail}
         className={cn(
@@ -218,11 +236,14 @@ export function ReminderCard({
           </button>
         </div>
       </div>
+      </>
     );
   }
 
   // Grid view
   return (
+    <>
+      {snoozePicker}
     <div
       onClick={onDetail}
       className={cn(
@@ -346,5 +367,6 @@ export function ReminderCard({
         </div>
       </div>
     </div>
+    </>
   );
 }
