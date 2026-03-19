@@ -8,12 +8,10 @@ import {
   Clock,
   BarChart3,
   Settings,
-  Menu,
-  X,
-  Sun,
-  Moon,
   ChevronLeft,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
@@ -28,7 +26,6 @@ function getUserFromStorage(): { displayName: string; email: string } {
       const user = JSON.parse(raw);
       return { displayName: user.displayName || 'Usuario', email: user.email || '' };
     }
-    // Fallback: decode JWT token
     const token = localStorage.getItem('token');
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -42,12 +39,21 @@ function getUserFromStorage(): { displayName: string; email: string } {
 }
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/', icon: LayoutDashboard, label: 'Inicio' },
   { to: '/reminders', icon: BellIcon, label: 'Avisos' },
   { to: '/calendar', icon: Calendar, label: 'Calendario' },
   { to: '/history', icon: Clock, label: 'Historial' },
   { to: '/analytics', icon: BarChart3, label: 'Analítica' },
-  { to: '/settings', icon: Settings, label: 'Configuración' },
+  { to: '/settings', icon: Settings, label: 'Ajustes' },
+];
+
+// Bottom tab bar items (subset for mobile)
+const tabItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Inicio' },
+  { to: '/reminders', icon: BellIcon, label: 'Avisos' },
+  { to: '/calendar', icon: Calendar, label: 'Calendario' },
+  { to: '/analytics', icon: BarChart3, label: 'Analítica' },
+  { to: '/settings', icon: Settings, label: 'Ajustes' },
 ];
 
 function useIsMobile() {
@@ -65,18 +71,10 @@ export function RootLayout() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { sidebarOpen, theme, toggleSidebar, setTheme } = useUIStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   const isCollapsed = !sidebarOpen && !isMobile;
   const user = useMemo(() => getUserFromStorage(), []);
 
-  // Connect to SignalR for real-time push notifications
   useSignalR();
-
-  // Close mobile drawer on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
 
   const handleThemeToggle = useCallback(() => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -91,33 +89,23 @@ export function RootLayout() {
     window.location.href = '/login';
   }, []);
 
+  const currentPageLabel = navItems.find(
+    (item) => item.to === location.pathname || (item.to === '/' && location.pathname === '/')
+  )?.label ?? 'mbeNote';
+
+  // Desktop sidebar content
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      {/* Logo */}
-      <div
-        className={cn(
-          'flex h-16 items-center border-b border-slate-200 px-4 dark:border-slate-800',
-          isCollapsed ? 'justify-center' : 'gap-3'
-        )}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold text-white">
-          m
-        </div>
+      <div className={cn('flex h-16 items-center border-b border-slate-200 px-4 dark:border-slate-800', isCollapsed ? 'justify-center' : 'gap-3')}>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold text-white">m</div>
         <AnimatePresence>
           {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="overflow-hidden whitespace-nowrap text-lg font-semibold text-slate-900 dark:text-white"
-            >
+            <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="overflow-hidden whitespace-nowrap text-lg font-semibold text-slate-900 dark:text-white">
               mbeNote
             </motion.span>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {navItems.map((item) => (
           <NavLink
@@ -136,22 +124,10 @@ export function RootLayout() {
           >
             {({ isActive }) => (
               <>
-                <item.icon
-                  className={cn(
-                    'h-5 w-5 shrink-0 transition-colors',
-                    isActive
-                      ? 'text-blue-500 dark:text-blue-400'
-                      : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
-                  )}
-                />
+                <item.icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300')} />
                 <AnimatePresence>
                   {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="ml-3 overflow-hidden whitespace-nowrap"
-                    >
+                    <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="ml-3 overflow-hidden whitespace-nowrap">
                       {item.label}
                     </motion.span>
                   )}
@@ -161,64 +137,21 @@ export function RootLayout() {
           </NavLink>
         ))}
       </nav>
-
-      {/* Footer */}
-      <div
-        className={cn(
-          'border-t border-slate-200 p-3 dark:border-slate-800',
-          isCollapsed && 'flex flex-col items-center gap-2'
-        )}
-      >
-        {/* Theme toggle */}
-        <button
-          onClick={handleThemeToggle}
-          className={cn(
-            'flex w-full items-center rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
-            isCollapsed && 'justify-center px-2'
-          )}
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5 shrink-0 text-amber-500" />
-          ) : (
-            <Moon className="h-5 w-5 shrink-0 text-slate-400" />
-          )}
-          {!isCollapsed && (
-            <span className="ml-3">
-              {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            </span>
-          )}
+      <div className={cn('border-t border-slate-200 p-3 dark:border-slate-800', isCollapsed && 'flex flex-col items-center gap-2')}>
+        <button onClick={handleThemeToggle} className={cn('flex w-full items-center rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800', isCollapsed && 'justify-center px-2')}>
+          {theme === 'dark' ? <Sun className="h-5 w-5 shrink-0 text-amber-500" /> : <Moon className="h-5 w-5 shrink-0 text-slate-400" />}
+          {!isCollapsed && <span className="ml-3">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>}
         </button>
-
-        {/* User */}
-        <div
-          className={cn(
-            'flex items-center rounded-lg px-3 py-2',
-            isCollapsed && 'justify-center px-2'
-          )}
-        >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-semibold text-white">
-            {user.displayName.charAt(0).toUpperCase()}
-          </div>
+        <div className={cn('flex items-center rounded-lg px-3 py-2', isCollapsed && 'justify-center px-2')}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-semibold text-white">{user.displayName.charAt(0).toUpperCase()}</div>
           {!isCollapsed && (
             <div className="ml-3 flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                {user.displayName}
-              </p>
-              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                {user.email}
-              </p>
+              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{user.displayName}</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
             </div>
           )}
         </div>
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className={cn(
-            'flex w-full items-center rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400',
-            isCollapsed && 'justify-center px-2'
-          )}
-        >
+        <button onClick={handleLogout} className={cn('flex w-full items-center rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400', isCollapsed && 'justify-center px-2')}>
           <LogOut className="h-5 w-5 shrink-0" />
           {!isCollapsed && <span className="ml-3">Cerrar sesión</span>}
         </button>
@@ -237,88 +170,68 @@ export function RootLayout() {
           className="relative hidden shrink-0 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:block"
         >
           {sidebarContent}
-
-          {/* Collapse toggle */}
-          <button
-            onClick={toggleSidebar}
-            className="absolute -right-3 top-20 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-          >
-            <ChevronLeft
-              className={cn(
-                'h-3.5 w-3.5 text-slate-600 transition-transform dark:text-slate-400',
-                !sidebarOpen && 'rotate-180'
-              )}
-            />
+          <button onClick={toggleSidebar} className="absolute -right-3 top-20 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
+            <ChevronLeft className={cn('h-3.5 w-3.5 text-slate-600 transition-transform dark:text-slate-400', !sidebarOpen && 'rotate-180')} />
           </button>
         </motion.aside>
       )}
 
-      {/* Mobile Drawer Overlay */}
-      <AnimatePresence>
-        {isMobile && mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 w-[280px] border-r border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
-            >
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="absolute right-3 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              {sidebarContent}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 md:px-6">
+        {/* Header - simplified for mobile */}
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 md:h-16 md:px-6">
           <div className="flex items-center gap-3">
             {isMobile && (
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500 text-xs font-bold text-white">m</div>
             )}
             <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
-              {navItems.find(
-                (item) =>
-                  item.to === location.pathname ||
-                  (item.to === '/' && location.pathname === '/')
-              )?.label ?? 'mbeNote'}
+              {currentPageLabel}
             </h1>
           </div>
-
           <div className="flex items-center gap-2">
+            {isMobile && (
+              <button onClick={handleThemeToggle} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5" />}
+              </button>
+            )}
             <NotificationBell />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className={cn('flex-1 overflow-y-auto', isMobile && 'pb-20')}>
           <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* iOS PWA install banner */}
+      {/* Mobile Bottom Tab Bar */}
+      {isMobile && (
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/95">
+          <div className="flex items-center justify-around px-2 pb-safe">
+            {tabItems.map((item) => {
+              const isActive = item.to === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.to);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className="flex flex-1 flex-col items-center gap-0.5 py-2"
+                >
+                  <item.icon className={cn('h-5 w-5 transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')} />
+                  <span className={cn('text-[10px] font-medium transition-colors', isActive ? 'text-blue-500' : 'text-slate-400')}>
+                    {item.label}
+                  </span>
+                </NavLink>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
       <IOSInstallBanner />
     </div>
   );
