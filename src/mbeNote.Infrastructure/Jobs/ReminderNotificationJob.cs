@@ -91,6 +91,7 @@ public class ReminderNotificationJob : IJob
                 .CountAsync(n => n.UserId == notification.UserId && n.SentAt != null && n.ReadAt == null && n.DismissedAt == null);
 
             // 2. Web Push (desktop + iPhone PWA)
+            var pushSucceeded = false;
             try
             {
                 var reminderTimeFormatted = reminderTime.ToString("HH:mm");
@@ -106,13 +107,16 @@ public class ReminderNotificationJob : IJob
                     reminderTime,
                     unreadCount
                 );
+                pushSucceeded = true;
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Web Push failed for notification {Id}", notification.Id);
             }
 
-            // 3. Email (via Resend HTTP API - works on Railway)
+            // 3. Email — only if reminder has Email channel enabled AND push failed
+            var emailEnabled = (notification.Channel & NotificationChannel.Email) != 0;
+            if (emailEnabled && !pushSucceeded)
             try
             {
                 var user = await db.Users.FindAsync(notification.UserId);

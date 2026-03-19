@@ -23,6 +23,7 @@ const reminderSchema = z.object({
   location: z.string().optional(),
   recurrenceRule: z.string().optional(),
   notifyMinutesBefore: z.number(),
+  sendEmail: z.boolean(),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -86,12 +87,16 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
           return 15;
         }
       })(),
+      sendEmail: reminder?.notificationChannels
+        ? !!(reminder.notificationChannels & NotificationChannel.Email)
+        : false,
     },
   });
 
   const watchPriority = watch('priority');
   const watchNotifyMinutes = watch('notifyMinutesBefore');
   const watchIsAllDay = watch('isAllDay');
+  const watchSendEmail = watch('sendEmail');
 
   const isPastOrDone = isEditing && !!reminder && (
     reminder.status === ReminderStatus.Completed ||
@@ -115,7 +120,9 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
         location: data.location || null,
         recurrenceRule: data.recurrenceRule || null,
         notificationOffsets: data.notifyMinutesBefore > 0 ? JSON.stringify([data.notifyMinutesBefore]) : '[]',
-        notificationChannels: data.notifyMinutesBefore > 0 ? NotificationChannel.InApp : 0,
+        notificationChannels: data.notifyMinutesBefore > 0
+          ? NotificationChannel.InApp | (data.sendEmail ? NotificationChannel.Email : 0)
+          : 0,
       };
 
       if (isEditing && reminder) {
@@ -338,6 +345,18 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
                   </button>
                 ))}
               </div>
+              {watchNotifyMinutes > 0 && (
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register('sendEmail')}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    Enviar también por correo
+                  </span>
+                </label>
+              )}
             </div>
           </div>
 
