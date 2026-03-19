@@ -191,9 +191,19 @@ export function RootLayout() {
           </div>
           <div className="flex items-center gap-2">
             {isMobile && (
-              <button onClick={handleThemeToggle} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-                {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5" />}
-              </button>
+              <>
+                <button onClick={handleThemeToggle} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+                  {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5" />}
+                </button>
+                <div className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-[10px] font-semibold text-white">
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="max-w-[80px] truncate text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {user.displayName}
+                  </span>
+                </div>
+              </>
             )}
             <NotificationBell />
           </div>
