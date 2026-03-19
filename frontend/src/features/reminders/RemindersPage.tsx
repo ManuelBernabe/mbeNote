@@ -4,6 +4,7 @@ import { Plus, LayoutGrid, List, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { useReminders, useReminder } from '../../hooks/useReminders';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { cn } from '../../lib/utils';
 import type { ReminderResponse } from '../../types';
 import { ReminderStatus, ReminderPriority } from '../../types';
@@ -25,11 +26,14 @@ export function RemindersPage() {
   // Fetch reminder by ID when navigated from a push notification (?open=ID)
   const openId = searchParams.get('open') ?? '';
   const { data: openedReminder } = useReminder(openId);
+  const { setUnreadCount } = useNotificationStore();
 
   useEffect(() => {
     if (openedReminder) {
       setDetailReminder(openedReminder);
       setSearchParams({}, { replace: true });
+      // User has seen the notification — clear the app icon badge
+      setUnreadCount(0);
     }
   }, [openedReminder]);
 
