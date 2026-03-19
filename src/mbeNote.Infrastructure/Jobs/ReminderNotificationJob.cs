@@ -89,7 +89,7 @@ public class ReminderNotificationJob : IJob
                     notification.UserId,
                     title,
                     pushBody,
-                    "/reminders",
+                    $"/reminders?open={notification.ReminderId}",
                     reminderTime
                 );
             }

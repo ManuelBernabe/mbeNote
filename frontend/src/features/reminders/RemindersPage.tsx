@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, LayoutGrid, List, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 import { useReminders } from '../../hooks/useReminders';
 import { cn } from '../../lib/utils';
 import type { ReminderResponse } from '../../types';
@@ -12,6 +13,7 @@ import { ReminderForm } from './components/ReminderForm';
 import { ReminderDetail } from './components/ReminderDetail';
 
 export function RemindersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: remindersData, refetch } = useReminders();
   const reminders = remindersData?.items ?? [];
 
@@ -19,6 +21,18 @@ export function RemindersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingReminder, setEditingReminder] = useState<ReminderResponse | null>(null);
   const [detailReminder, setDetailReminder] = useState<ReminderResponse | null>(null);
+
+  // Auto-open reminder detail when navigated from a push notification (?open=ID)
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId && reminders.length > 0) {
+      const target = reminders.find((r) => String(r.id) === openId);
+      if (target) {
+        setDetailReminder(target);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, reminders]);
 
   // Filters
   const [search, setSearch] = useState('');
