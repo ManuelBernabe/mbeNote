@@ -18,6 +18,7 @@ import { CalendarPage } from './features/calendar/CalendarPage';
 import { HistoryPage } from './features/history/HistoryPage';
 import { AnalyticsPage } from './features/analytics/AnalyticsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { ReminderOpenPage } from './features/reminders/ReminderOpenPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -125,6 +126,7 @@ export function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/reminders" element={<RemindersPage />} />
+            <Route path="/reminder/:id" element={<ReminderOpenPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />

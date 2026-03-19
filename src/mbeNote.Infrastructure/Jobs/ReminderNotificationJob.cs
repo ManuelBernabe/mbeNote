@@ -103,7 +103,7 @@ public class ReminderNotificationJob : IJob
                     notification.UserId,
                     title,
                     pushBody,
-                    $"/reminders?open={notification.ReminderId}",
+                    $"/reminder/{notification.ReminderId}",
                     reminderTime,
                     unreadCount
                 );
