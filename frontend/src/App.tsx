@@ -71,10 +71,16 @@ function NotificationClickHandler() {
 
     consumePending(); // Check on mount (app opened from closed state)
 
-    // Also check when app becomes visible again (iOS background → foreground)
+    // Check when app becomes visible again (iOS background → foreground)
     const onVisible = () => { if (document.visibilityState === 'visible') consumePending(); };
+    // Also check on focus — covers the case where the app was already visible
+    // (visibilitychange doesn't fire) but the user tapped a notification
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', consumePending);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', consumePending);
+    };
   }, [handleNotificationUrl]);
 
   // Fast-path: postMessage (works if listener is already up when message arrives)

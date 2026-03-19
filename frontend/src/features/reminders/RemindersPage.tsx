@@ -69,13 +69,13 @@ export function RemindersPage() {
   const { setUnreadCount } = useNotificationStore();
 
   useEffect(() => {
-    if (openedReminder) {
+    if (openId && openedReminder) {
       setDetailReminder(openedReminder);
       setSearchParams({}, { replace: true });
       // User has seen the notification — clear the app icon badge
       setUnreadCount(0);
     }
-  }, [openedReminder]);
+  }, [openId, openedReminder]);
 
   // Filters
   const [search, setSearch] = useState('');

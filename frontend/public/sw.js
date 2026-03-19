@@ -91,13 +91,25 @@ self.addEventListener('notificationclick', (event) => {
       const appClient = clientList.find(c => c.url.startsWith(self.location.origin));
 
       if (appClient) {
-        // Also try postMessage as fast path (works if listener is already registered)
+        // Use navigate() to directly change the URL in the existing window (most reliable).
+        // This works even if the app was already focused/visible so visibilitychange
+        // doesn't fire, and avoids any postMessage delivery race conditions.
+        if (appClient.navigate) {
+          return appClient.navigate(new URL(url, self.location.origin).href)
+            .then(client => client ? client.focus() : null)
+            .catch(() => {
+              // navigate() not supported or failed — fall back to postMessage
+              appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
+              return appClient.focus();
+            });
+        }
+        // Fallback for browsers without WindowClient.navigate()
         appClient.postMessage({ type: 'NOTIFICATION_CLICK', url });
         return appClient.focus();
       }
 
-      // App was closed — open with the full URL directly in the address bar
-      return clients.openWindow(url);
+      // App was closed — open with the full absolute URL
+      return clients.openWindow(new URL(url, self.location.origin).href);
     })
   );
 });
