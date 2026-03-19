@@ -67,6 +67,8 @@ builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<INaturalLanguageParserService, NaturalLanguageParserService>();
 builder.Services.AddScoped<WebPushService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<ShareService>();
+builder.Services.AddScoped<IcsService>();
 
 // SignalR
 builder.Services.AddSignalR();
@@ -261,6 +263,12 @@ reminders.MapPost("/check-conflicts", async (ConflictCheckRequest req, HttpConte
 reminders.MapPost("/parse-natural", (NaturalLanguageRequest req, INaturalLanguageParserService parser) =>
     Results.Ok(parser.Parse(req.Text)));
 
+reminders.MapPost("/batch-delete", async (BatchOperationRequest req, HttpContext ctx, IReminderService svc) =>
+    Results.Ok(await svc.BatchDeleteAsync(GetUserId(ctx.User), req.Ids)));
+
+reminders.MapPost("/batch-complete", async (BatchOperationRequest req, HttpContext ctx, IReminderService svc) =>
+    Results.Ok(await svc.BatchCompleteAsync(GetUserId(ctx.User), req.Ids)));
+
 // ==================== HISTORY ====================
 reminders.MapGet("/{id:int}/history", async (int id, IReminderHistoryService svc, int page = 1, int pageSize = 50) =>
     Results.Ok(await svc.GetByReminderAsync(id, page, pageSize)));
@@ -345,6 +353,9 @@ analytics.MapGet("/streaks", async (HttpContext ctx, IAnalyticsService svc) =>
 analytics.MapGet("/category-distribution", async (HttpContext ctx, IAnalyticsService svc) =>
     Results.Ok(await svc.GetCategoryDistributionAsync(GetUserId(ctx.User))));
 
+analytics.MapGet("/weekly-stats", async (HttpContext ctx, IAnalyticsService svc, int weeksBack = 8) =>
+    Results.Ok(await svc.GetWeeklyStatsAsync(GetUserId(ctx.User), weeksBack)));
+
 // ==================== PUSH SUBSCRIPTIONS ====================
 app.MapGet("/api/push/vapid-public-key", (IConfiguration config) =>
     Results.Ok(new { key = config["Vapid:PublicKey"] }));
@@ -363,6 +374,38 @@ app.MapPost("/api/push/unsubscribe", async (HttpContext ctx, WebPushService svc)
     if (body == null) return Results.BadRequest();
     await svc.RemoveSubscriptionAsync(GetUserId(ctx.User), body.Endpoint);
     return Results.Ok();
+}).RequireAuthorization();
+
+// ==================== SHARES ====================
+app.MapGet("/api/reminders/{id:int}/shares", async (int id, HttpContext ctx, ShareService svc) =>
+    Results.Ok(await svc.GetSharesAsync(GetUserId(ctx.User), id))).RequireAuthorization();
+
+app.MapPost("/api/reminders/{id:int}/shares", async (int id, ShareReminderRequest req, HttpContext ctx, ShareService svc) => {
+    try { return Results.Ok(await svc.ShareAsync(GetUserId(ctx.User), id, req)); }
+    catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+    catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapDelete("/api/reminders/{id:int}/shares/{shareId:int}", async (int id, int shareId, HttpContext ctx, ShareService svc) => {
+    try { await svc.UnshareAsync(GetUserId(ctx.User), id, shareId); return Results.NoContent(); }
+    catch (KeyNotFoundException) { return Results.NotFound(); }
+}).RequireAuthorization();
+
+app.MapGet("/api/reminders/shared-with-me", async (HttpContext ctx, ShareService svc) =>
+    Results.Ok(await svc.GetSharedWithMeAsync(GetUserId(ctx.User)))).RequireAuthorization();
+
+// ==================== ICS EXPORT/IMPORT ====================
+app.MapGet("/api/reminders/export.ics", async (HttpContext ctx, IcsService svc, string? ids) => {
+    var idList = ids?.Split(',').Select(int.Parse).ToList();
+    var ics = await svc.ExportAsync(GetUserId(ctx.User), idList);
+    return Results.File(Encoding.UTF8.GetBytes(ics), "text/calendar; charset=utf-8", "mbenote-avisos.ics");
+}).RequireAuthorization();
+
+app.MapPost("/api/reminders/import.ics", async (HttpContext ctx, IcsService svc) => {
+    using var reader = new StreamReader(ctx.Request.Body);
+    var content = await reader.ReadToEndAsync();
+    var count = await svc.ImportAsync(GetUserId(ctx.User), content);
+    return Results.Ok(new { imported = count });
 }).RequireAuthorization();
 
 // ==================== SIGNALR ====================

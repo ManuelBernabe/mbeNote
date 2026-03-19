@@ -8,6 +8,9 @@ import {
   MapPin,
   BellOff,
   BellRing,
+  CheckSquare,
+  Square,
+  Paperclip,
 } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -56,6 +59,9 @@ interface ReminderCardProps {
   onEdit: () => void;
   onDetail: () => void;
   onRefresh: () => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelect?: (id: number) => void;
 }
 
 export function ReminderCard({
@@ -64,6 +70,9 @@ export function ReminderCard({
   onEdit,
   onDetail,
   onRefresh,
+  selectionMode = false,
+  selected = false,
+  onSelect,
 }: ReminderCardProps) {
   const completeMutation = useCompleteReminder();
   const deleteMutation = useDeleteReminder();
@@ -135,16 +144,24 @@ export function ReminderCard({
       <>
         {snoozePicker}
       <div
-        onClick={onDetail}
+        onClick={selectionMode ? () => onSelect?.(reminder.id) : onDetail}
         className={cn(
           'card group flex cursor-pointer items-center gap-4 p-4 transition-all hover:shadow-soft',
-          isOverdue && 'border-red-200 dark:border-red-500/20'
+          isOverdue && 'border-red-200 dark:border-red-500/20',
+          selected && 'ring-2 ring-blue-500'
         )}
       >
+        {/* Selection checkbox */}
+        {selectionMode && (
+          <div className="shrink-0 text-blue-500">
+            {selected ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5 text-slate-400" />}
+          </div>
+        )}
+
         {/* Category color strip */}
         <div
           className="h-10 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
+          style={{ backgroundColor: reminder.color ?? reminder.categoryColor ?? '#94a3b8' }}
         />
 
         {/* Content */}
@@ -245,21 +262,27 @@ export function ReminderCard({
     <>
       {snoozePicker}
     <div
-      onClick={onDetail}
+      onClick={selectionMode ? () => onSelect?.(reminder.id) : onDetail}
       className={cn(
         'card group cursor-pointer overflow-hidden transition-all hover:shadow-soft',
-        isOverdue && 'border-red-200 dark:border-red-500/20'
+        isOverdue && 'border-red-200 dark:border-red-500/20',
+        selected && 'ring-2 ring-blue-500'
       )}
     >
       {/* Category color strip */}
       <div
         className="h-1 w-full"
-        style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
+        style={{ backgroundColor: reminder.color ?? reminder.categoryColor ?? '#94a3b8' }}
       />
 
       <div className="p-4">
         {/* Header */}
         <div className="mb-2 flex items-start justify-between gap-2">
+          {selectionMode && (
+            <div className="shrink-0 text-blue-500">
+              {selected ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5 text-slate-400" />}
+            </div>
+          )}
           <h3 className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-white">
             {reminder.title}
           </h3>
@@ -314,6 +337,19 @@ export function ReminderCard({
               <MapPin className="h-3 w-3" /> {reminder.location}
             </span>
           )}
+          {reminder.links && (() => {
+            try {
+              const count = JSON.parse(reminder.links).length;
+              if (!count) return null;
+              return (
+                <span className="flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                  <Paperclip className="h-3 w-3" /> {count}
+                </span>
+              );
+            } catch {
+              return null;
+            }
+          })()}
         </div>
 
         {/* Actions */}

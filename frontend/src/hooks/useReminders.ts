@@ -156,3 +156,19 @@ export function useUnmuteReminder() {
     },
   });
 }
+
+export function useBatchDeleteReminders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => api.batchDeleteReminders(ids),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
+  });
+}
+
+export function useBatchCompleteReminders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => api.batchCompleteReminders(ids),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
+  });
+}

@@ -17,11 +17,14 @@ import type {
   RegisterRequest,
   ReminderListQuery,
   ReminderResponse,
+  ShareReminderRequest,
+  ShareResponse,
   SnoozeRequest,
   StreakResponse,
   CategoryDistributionResponse,
   UpdateCategoryRequest,
   UpdateReminderRequest,
+  WeeklyStatItem,
 } from "../types";
 
 const BASE_URL = "/api";
@@ -297,6 +300,20 @@ export async function getCategoryDistribution(): Promise<
   return apiFetch("/analytics/category-distribution");
 }
 
+export async function getWeeklyStats(weeksBack = 8): Promise<WeeklyStatItem[]> {
+  return apiFetch(`/analytics/weekly-stats?weeksBack=${weeksBack}`);
+}
+
+// ── Batch operations ───────────────────────────────────────────────────────────
+
+export async function batchDeleteReminders(ids: number[]): Promise<void> {
+  return apiFetch('/reminders/batch-delete', { method: 'POST', body: JSON.stringify({ ids }) });
+}
+
+export async function batchCompleteReminders(ids: number[]): Promise<void> {
+  return apiFetch('/reminders/batch-complete', { method: 'POST', body: JSON.stringify({ ids }) });
+}
+
 // ── Natural Language ───────────────────────────────────────────────────────────
 
 export async function parseNaturalLanguage(
@@ -306,4 +323,35 @@ export async function parseNaturalLanguage(
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+// ── Shares ─────────────────────────────────────────────────────────────────────
+
+export async function getShares(reminderId: string): Promise<ShareResponse[]> {
+  return apiFetch(`/reminders/${reminderId}/shares`);
+}
+
+export async function shareReminder(reminderId: string, data: ShareReminderRequest): Promise<ShareResponse> {
+  return apiFetch(`/reminders/${reminderId}/shares`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function unshareReminder(reminderId: string, shareId: number): Promise<void> {
+  return apiFetch(`/reminders/${reminderId}/shares/${shareId}`, { method: 'DELETE' });
+}
+
+export async function getSharedWithMe(): Promise<ReminderResponse[]> {
+  return apiFetch('/reminders/shared-with-me');
+}
+
+// ── ICS Export/Import ──────────────────────────────────────────────────────────
+
+export async function exportRemindersIcs(ids?: number[]): Promise<Blob> {
+  const query = ids?.length ? `?ids=${ids.join(',')}` : '';
+  const token = localStorage.getItem('token');
+  const res = await fetch(`/api/reminders/export.ics${query}`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.blob();
+}
+
+export async function importRemindersIcs(icsContent: string): Promise<{ imported: number }> {
+  return apiFetch('/reminders/import.ics', { method: 'POST', body: icsContent, headers: { 'Content-Type': 'text/calendar' } });
 }

@@ -25,3 +25,5 @@ public record CategoryDistributionResponse(
     int Count,
     double Percentage
 );
+
+public record WeeklyStatItem(DateTime WeekStart, int Created, int Completed, int Deleted, double CompletionRate);

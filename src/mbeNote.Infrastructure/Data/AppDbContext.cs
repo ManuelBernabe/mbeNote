@@ -44,6 +44,7 @@ public class AppDbContext : DbContext
             e.Property(r => r.TimeZone).HasMaxLength(50);
             e.Property(r => r.RecurrenceRule).HasMaxLength(500);
             e.Property(r => r.NotificationOffsets).HasMaxLength(200);
+            e.Property(r => r.Links).HasMaxLength(4000);
             e.Property(r => r.GoogleCalendarEventId).HasMaxLength(256);
             e.Property(r => r.OutlookEventId).HasMaxLength(256);
 

@@ -12,6 +12,7 @@ import {
   LogOut,
   Sun,
   Moon,
+  Search,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUIStore } from '../stores/uiStore';
@@ -21,6 +22,7 @@ import { markAllNotificationsAsRead } from '../services/api';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
 import { IOSInstallBanner } from '../components/shared/IOSInstallBanner';
 import { UpdateBanner } from '../components/shared/UpdateBanner';
+import { CommandPalette } from '../components/shared/CommandPalette';
 
 function getUserFromStorage(): { displayName: string; email: string } {
   try {
@@ -76,10 +78,23 @@ export function RootLayout() {
   const { sidebarOpen, theme, toggleSidebar, setTheme } = useUIStore();
   const isCollapsed = !sidebarOpen && !isMobile;
   const user = useMemo(() => getUserFromStorage(), []);
+  const [commandOpen, setCommandOpen] = useState(false);
 
   useSignalR();
 
   const { setUnreadCount } = useNotificationStore();
+
+  // Global Ctrl+K / Cmd+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // Clear badge and mark all notifications as read whenever the app becomes visible
   useEffect(() => {
@@ -227,6 +242,13 @@ export function RootLayout() {
                 </div>
               </>
             )}
+            <button
+              onClick={() => setCommandOpen(true)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800 hidden md:flex items-center gap-2"
+            >
+              <Search className="h-3.5 w-3.5" />
+              <span>Buscar... ⌘K</span>
+            </button>
             <NotificationBell />
           </div>
         </header>
@@ -270,6 +292,7 @@ export function RootLayout() {
 
       <UpdateBanner />
       <IOSInstallBanner />
+      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
     </div>
   );
 }

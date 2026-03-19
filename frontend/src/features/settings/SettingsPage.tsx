@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun,
@@ -15,6 +15,9 @@ import {
   Loader2,
   RefreshCw,
   Smartphone,
+  Database,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
@@ -26,6 +29,7 @@ import {
   useUpdateCategory,
   useDeleteCategory,
 } from '../../hooks/useCategories';
+import { exportRemindersIcs, importRemindersIcs } from '../../services/api';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -47,6 +51,47 @@ export function SettingsPage() {
   const { theme, setTheme } = useUIStore();
   const { needsRefresh, checkForUpdate, applyUpdate } = useAppUpdate();
   const [checking, setChecking] = useState(false);
+  const [exportingIcs, setExportingIcs] = useState(false);
+  const [importingIcs, setImportingIcs] = useState(false);
+  const icsInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportIcs = async () => {
+    setExportingIcs(true);
+    try {
+      const blob = await exportRemindersIcs();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mbenote-avisos.ics';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Avisos exportados');
+    } catch {
+      toast.error('Error al exportar');
+    } finally {
+      setExportingIcs(false);
+    }
+  };
+
+  const handleImportIcs = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingIcs(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const content = evt.target?.result as string;
+        const result = await importRemindersIcs(content);
+        toast.success(`${result.imported} avisos importados`);
+      } catch {
+        toast.error('Error al importar el archivo .ics');
+      } finally {
+        setImportingIcs(false);
+        if (icsInputRef.current) icsInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
   const { data: categories = [] } = useCategories();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
@@ -438,6 +483,69 @@ export function SettingsPage() {
               </button>
             </div>
           ))}
+        </div>
+      </motion.section>
+
+      {/* Data: ICS Export/Import */}
+      <motion.section variants={itemVariants} className="card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Database className="h-5 w-5 text-teal-500" />
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+            Datos
+          </h2>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Exportar avisos (.ics)
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Descarga todos tus avisos en formato iCalendar
+              </p>
+            </div>
+            <button
+              onClick={handleExportIcs}
+              disabled={exportingIcs}
+              className="flex items-center gap-1.5 rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:bg-teal-500/10 dark:text-teal-300 dark:hover:bg-teal-500/20"
+            >
+              {exportingIcs ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Exportar
+            </button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Importar .ics
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Importa avisos desde un archivo iCalendar
+              </p>
+            </div>
+            <button
+              onClick={() => icsInputRef.current?.click()}
+              disabled={importingIcs}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
+            >
+              {importingIcs ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              Importar
+            </button>
+            <input
+              ref={icsInputRef}
+              type="file"
+              accept=".ics"
+              className="hidden"
+              onChange={handleImportIcs}
+            />
+          </div>
         </div>
       </motion.section>
 

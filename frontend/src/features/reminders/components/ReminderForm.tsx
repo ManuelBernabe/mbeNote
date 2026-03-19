@@ -24,12 +24,26 @@ const reminderSchema = z.object({
   recurrenceRule: z.string().optional(),
   notifyMinutesBefore: z.number(),
   sendEmail: z.boolean(),
+  color: z.string().optional(),
+  linksRaw: z.string().optional(),
 });
+
+const COLOR_SWATCHES = [
+  '#3b82f6', // azul
+  '#22c55e', // verde
+  '#ef4444', // rojo
+  '#f97316', // naranja
+  '#a855f7', // morado
+  '#ec4899', // rosa
+  '#eab308', // amarillo
+  '#94a3b8', // gris
+];
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
 
 interface ReminderFormProps {
   reminder?: ReminderResponse | null;
+  initialDate?: Date | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -50,7 +64,7 @@ const notificationPresets = [
   { value: 1440, label: '1 día' },
 ];
 
-export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) {
+export function ReminderForm({ reminder, initialDate, onClose, onSaved }: ReminderFormProps) {
   const { data: categories = [] } = useCategories();
   const createMutation = useCreateReminder();
   const updateMutation = useUpdateReminder();
@@ -70,6 +84,8 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       description: reminder?.description ?? '',
       startDateTime: reminder?.startDateTime
         ? reminder.startDateTime.slice(0, 16)
+        : initialDate
+        ? `${initialDate.getFullYear()}-${String(initialDate.getMonth() + 1).padStart(2, '0')}-${String(initialDate.getDate()).padStart(2, '0')}T09:00`
         : '',
       endDateTime: reminder?.endDateTime
         ? reminder.endDateTime.slice(0, 16)
@@ -90,6 +106,15 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       sendEmail: reminder?.notificationChannels
         ? !!(reminder.notificationChannels & NotificationChannel.Email)
         : false,
+      color: reminder?.color ?? '#3b82f6',
+      linksRaw: (() => {
+        try {
+          const a = JSON.parse(reminder?.links ?? '[]');
+          return Array.isArray(a) ? a.join('\n') : '';
+        } catch {
+          return '';
+        }
+      })(),
     },
   });
 
@@ -97,6 +122,7 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
   const watchNotifyMinutes = watch('notifyMinutesBefore');
   const watchIsAllDay = watch('isAllDay');
   const watchSendEmail = watch('sendEmail');
+  const watchColor = watch('color');
 
   const isPastOrDone = isEditing && !!reminder && (
     reminder.status === ReminderStatus.Completed ||
@@ -108,6 +134,8 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
       // Send datetime as-is (local time string) so the backend stores the user's intended time
       const startDt = data.startDateTime; // "2026-03-17T18:00"
       const endDt = data.endDateTime || null;
+
+      const linksArr = (data.linksRaw ?? '').split('\n').map(s => s.trim()).filter(Boolean);
 
       const payload: any = {
         title: data.title,
@@ -123,6 +151,8 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
         notificationChannels: data.notifyMinutesBefore > 0
           ? NotificationChannel.InApp | (data.sendEmail ? NotificationChannel.Email : 0)
           : 0,
+        color: data.color,
+        links: linksArr.length > 0 ? JSON.stringify(linksArr) : null,
       };
 
       if (isEditing && reminder) {
@@ -323,6 +353,37 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
               )}
             />
 
+            {/* Color */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Color del aviso
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {COLOR_SWATCHES.map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => setValue('color', hex)}
+                    className={cn(
+                      'h-7 w-7 rounded-full border-2 transition-all',
+                      watchColor === hex
+                        ? 'scale-110 border-slate-700 dark:border-white'
+                        : 'border-transparent hover:scale-105'
+                    )}
+                    style={{ backgroundColor: hex }}
+                    title={hex}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={watchColor ?? '#3b82f6'}
+                  onChange={(e) => setValue('color', e.target.value)}
+                  className="h-7 w-7 cursor-pointer rounded-full border-2 border-slate-200 bg-transparent p-0 dark:border-slate-600"
+                  title="Color personalizado"
+                />
+              </div>
+            </div>
+
             {/* Notification timing */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -357,6 +418,19 @@ export function ReminderForm({ reminder, onClose, onSaved }: ReminderFormProps) 
                   </span>
                 </label>
               )}
+            </div>
+
+            {/* Links and notes */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Notas y enlaces (uno por línea)
+              </label>
+              <textarea
+                {...register('linksRaw')}
+                rows={2}
+                placeholder="https://... o nota libre"
+                className="input-field resize-none"
+              />
             </div>
           </div>
 

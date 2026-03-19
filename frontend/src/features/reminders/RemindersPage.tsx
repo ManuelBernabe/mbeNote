@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import { Plus, LayoutGrid, List, Inbox } from 'lucide-react';
+import { Plus, LayoutGrid, List, Inbox, ArrowUpDown, CheckSquare, Trash2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
-import { useReminders, useReminder } from '../../hooks/useReminders';
+import { useReminders, useReminder, useBatchDeleteReminders, useBatchCompleteReminders } from '../../hooks/useReminders';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { cn } from '../../lib/utils';
 import type { ReminderResponse } from '../../types';
@@ -52,9 +52,16 @@ export function RemindersPage() {
   const reminders = remindersData?.items ?? [];
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'category'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [showForm, setShowForm] = useState(false);
   const [editingReminder, setEditingReminder] = useState<ReminderResponse | null>(null);
   const [detailReminder, setDetailReminder] = useState<ReminderResponse | null>(null);
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const batchDelete = useBatchDeleteReminders();
+  const batchComplete = useBatchCompleteReminders();
 
   // Fetch reminder by ID when navigated from a push notification (?open=ID)
   const openId = searchParams.get('open') ?? '';
@@ -77,7 +84,7 @@ export function RemindersPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const filtered = useMemo(() => {
-    return reminders.filter((r) => {
+    const result = reminders.filter((r) => {
       if (
         search &&
         !r.title.toLowerCase().includes(search.toLowerCase()) &&
@@ -90,7 +97,41 @@ export function RemindersPage() {
       if (categoryFilter !== 'all' && String(r.categoryId) !== categoryFilter) return false;
       return true;
     });
-  }, [reminders, search, statusFilter, priorityFilter, categoryFilter]);
+
+    result.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'date') {
+        cmp = new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime();
+      } else if (sortBy === 'priority') {
+        cmp = a.priority - b.priority;
+      } else if (sortBy === 'category') {
+        const nameA = (a.categoryName ?? '').toLowerCase();
+        const nameB = (b.categoryName ?? '').toLowerCase();
+        cmp = nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+
+    return result;
+  }, [reminders, search, statusFilter, priorityFilter, categoryFilter, sortBy, sortDir]);
+
+  const toggleSelect = (id: number) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const selectAll = () => setSelectedIds(new Set(filtered.map(r => r.id)));
+  const clearSelection = () => { setSelectedIds(new Set()); setSelectionMode(false); };
+  const handleBatchDelete = async () => {
+    await batchDelete.mutateAsync([...selectedIds]);
+    toast.success(`${selectedIds.size} avisos eliminados`);
+    clearSelection();
+  };
+  const handleBatchComplete = async () => {
+    await batchComplete.mutateAsync([...selectedIds]);
+    toast.success(`${selectedIds.size} avisos completados`);
+    clearSelection();
+  };
 
   const handleEdit = (reminder: ReminderResponse) => {
     setEditingReminder(reminder);
@@ -115,6 +156,24 @@ export function RemindersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Sort control */}
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800">
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={`${sortBy}-${sortDir}`}
+              onChange={(e) => {
+                const [by, dir] = e.target.value.split('-') as ['date' | 'priority' | 'category', 'asc' | 'desc'];
+                setSortBy(by);
+                setSortDir(dir);
+              }}
+              className="bg-transparent text-xs text-slate-600 focus:outline-none dark:text-slate-300"
+            >
+              <option value="date-asc">Fecha ↑</option>
+              <option value="date-desc">Fecha ↓</option>
+              <option value="priority-desc">Prioridad</option>
+              <option value="category-asc">Categoría</option>
+            </select>
+          </div>
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
             <button
@@ -140,6 +199,15 @@ export function RemindersPage() {
               <List className="h-4 w-4" />
             </button>
           </div>
+          {!selectionMode && (
+            <button
+              onClick={() => setSelectionMode(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              <CheckSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Seleccionar</span>
+            </button>
+          )}
           <button
             onClick={() => setShowForm(true)}
             className="btn-primary gap-2"
@@ -215,6 +283,9 @@ export function RemindersPage() {
                   onEdit={() => handleEdit(reminder)}
                   onDetail={() => setDetailReminder(reminder)}
                   onRefresh={refetch}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(reminder.id)}
+                  onSelect={toggleSelect}
                 />
               </motion.div>
             ))}
@@ -224,6 +295,53 @@ export function RemindersPage() {
 
       {/* Draggable FAB for mobile */}
       <DraggableFAB onClick={() => setShowForm(true)} />
+
+      {/* Batch selection action bar */}
+      <AnimatePresence>
+        {selectionMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-16 left-0 right-0 z-40 flex items-center justify-center gap-2 px-4 md:bottom-4"
+          >
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-xl dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <button
+                onClick={selectAll}
+                className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Seleccionar todo
+              </button>
+              {selectedIds.size > 0 && (
+                <>
+                  <button
+                    onClick={handleBatchComplete}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
+                  >
+                    <Check className="h-4 w-4" />
+                    Completar ({selectedIds.size})
+                  </button>
+                  <button
+                    onClick={handleBatchDelete}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar ({selectedIds.size})
+                  </button>
+                </>
+              )}
+              <button
+                onClick={clearSelection}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                title="Cancelar selección"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Form Modal */}
       <AnimatePresence>

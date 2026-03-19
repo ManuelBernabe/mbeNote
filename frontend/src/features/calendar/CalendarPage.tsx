@@ -28,6 +28,7 @@ import { useReminders } from '../../hooks/useReminders';
 import { useUIStore, type CalendarView } from '../../stores/uiStore';
 import type { ReminderResponse } from '../../types';
 import { ReminderForm } from '../reminders/components/ReminderForm';
+import { AgendaView } from './components/AgendaView';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -39,18 +40,21 @@ export function CalendarPage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showForm, setShowForm] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const goToday = () => setCurrentDate(new Date());
 
   const goPrev = () => {
     if (view === 'month') setCurrentDate((d) => subMonths(d, 1));
     else if (view === 'week') setCurrentDate((d) => subWeeks(d, 1));
+    else if (view === 'agenda') setCurrentDate((d) => subDays(d, 14));
     else setCurrentDate((d) => subDays(d, 1));
   };
 
   const goNext = () => {
     if (view === 'month') setCurrentDate((d) => addMonths(d, 1));
     else if (view === 'week') setCurrentDate((d) => addWeeks(d, 1));
+    else if (view === 'agenda') setCurrentDate((d) => addDays(d, 14));
     else setCurrentDate((d) => addDays(d, 1));
   };
 
@@ -87,6 +91,9 @@ export function CalendarPage() {
       const end = endOfWeek(currentDate, { weekStartsOn: 1 });
       return `${format(start, 'd MMM', { locale: es })} - ${format(end, 'd MMM yyyy', { locale: es })}`;
     }
+    if (view === 'agenda') {
+      return `${format(currentDate, 'd MMM', { locale: es })} - ${format(addDays(currentDate, 13), 'd MMM yyyy', { locale: es })}`;
+    }
     return format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   }, [currentDate, view]);
 
@@ -119,7 +126,7 @@ export function CalendarPage() {
             Hoy
           </button>
           <div className="flex items-center rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
-            {(['month', 'week', 'day'] as CalendarView[]).map((v) => (
+            {(['month', 'week', 'day', 'agenda'] as CalendarView[]).map((v) => (
               <button
                 key={v}
                 onClick={() => setCalendarView(v)}
@@ -130,7 +137,7 @@ export function CalendarPage() {
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
                 )}
               >
-                {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
+                {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : v === 'day' ? 'Día' : 'Agenda'}
               </button>
             ))}
           </div>
@@ -303,13 +310,26 @@ export function CalendarPage() {
             </div>
           </div>
         )}
+
+        {view === 'agenda' && (
+          <AgendaView
+            currentDate={currentDate}
+            reminders={reminders}
+            onReminderClick={() => {}}
+            onNewReminder={(date) => {
+              setSelectedDate(date);
+              setShowForm(true);
+            }}
+          />
+        )}
       </div>
 
       <AnimatePresence>
         {showForm && (
           <ReminderForm
-            onClose={() => setShowForm(false)}
-            onSaved={() => setShowForm(false)}
+            initialDate={selectedDate}
+            onClose={() => { setShowForm(false); setSelectedDate(null); }}
+            onSaved={() => { setShowForm(false); setSelectedDate(null); }}
           />
         )}
       </AnimatePresence>

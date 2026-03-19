@@ -33,6 +33,9 @@ public class Reminder
     public DateTime? SnoozedUntil { get; set; }
     public int SnoozeCount { get; set; }
 
+    // Links and notes (JSON array of strings)
+    public string? Links { get; set; } // JSON array de strings: URLs y notas
+
     // External calendar sync
     public string? GoogleCalendarEventId { get; set; }
     public string? OutlookEventId { get; set; }

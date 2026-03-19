@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type Theme = "light" | "dark";
-export type CalendarView = "month" | "week" | "day";
+export type CalendarView = "month" | "week" | "day" | "agenda";
 
 interface UIState {
   sidebarOpen: boolean;

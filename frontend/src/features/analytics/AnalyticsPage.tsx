@@ -12,12 +12,16 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
+  Legend,
 } from 'recharts';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
 import * as api from '../../services/api';
+import type { WeeklyStatItem } from '../../types';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -61,6 +65,11 @@ export function AnalyticsPage() {
   const { data: completionRate } = useQuery({
     queryKey: ['analytics', 'completion-rate', from, to],
     queryFn: () => api.getCompletionRate(from, to),
+  });
+
+  const { data: weeklyStats = [] } = useQuery<WeeklyStatItem[]>({
+    queryKey: ['weekly-stats'],
+    queryFn: () => api.getWeeklyStats(8),
   });
 
   const streak = streakData?.currentStreak ?? 0;
@@ -274,6 +283,62 @@ export function AnalyticsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Weekly stats bar chart */}
+      <motion.div variants={itemVariants} className="card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-blue-500" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Semana a semana
+          </h3>
+        </div>
+        <div style={{ height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weeklyStats.map((item) => ({
+              week: format(new Date(item.weekStart), 'd MMM', { locale: es }),
+              Creados: item.created,
+              Completados: item.completed,
+              completionRate: item.completionRate,
+            }))}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="currentColor"
+                className="text-slate-200 dark:text-slate-700"
+              />
+              <XAxis
+                dataKey="week"
+                tick={{ fontSize: 11 }}
+                stroke="currentColor"
+                className="text-slate-400"
+              />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                stroke="currentColor"
+                className="text-slate-400"
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
+                formatter={(value: number, name: string, props) => {
+                  if (name === 'Creados' || name === 'Completados') {
+                    const rate = props.payload?.completionRate;
+                    return [
+                      name === 'Completados'
+                        ? `${value} (Tasa: ${rate}%)`
+                        : value,
+                      name,
+                    ];
+                  }
+                  return [value, name];
+                }}
+              />
+              <Legend />
+              <Bar dataKey="Creados" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Completados" fill="#22c55e" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
 
       {/* Active hours heatmap */}
       <motion.div variants={itemVariants} className="card p-6">

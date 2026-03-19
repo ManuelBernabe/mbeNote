@@ -16,7 +16,8 @@ public record CreateReminderRequest(
     string? RecurrenceRule,
     DateTime? RecurrenceEndDate,
     string? NotificationOffsets,
-    NotificationChannel? NotificationChannels
+    NotificationChannel? NotificationChannels,
+    string? Links
 );
 
 public record UpdateReminderRequest(
@@ -34,7 +35,8 @@ public record UpdateReminderRequest(
     string? RecurrenceRule,
     DateTime? RecurrenceEndDate,
     string? NotificationOffsets,
-    NotificationChannel? NotificationChannels
+    NotificationChannel? NotificationChannels,
+    string? Links
 );
 
 public record SnoozeRequest(int Minutes);
@@ -63,7 +65,8 @@ public record ReminderResponse(
     int SnoozeCount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    DateTime? CompletedAt
+    DateTime? CompletedAt,
+    string? Links
 );
 
 public record ReminderListQuery(
@@ -94,3 +97,6 @@ public record NaturalLanguageResponse(
     string? RecurrenceRule,
     string? RecurrenceDescription
 );
+
+public record BatchOperationRequest(IReadOnlyList<int> Ids);
+public record BatchOperationResult(int Succeeded, int Failed, IReadOnlyList<int> FailedIds);

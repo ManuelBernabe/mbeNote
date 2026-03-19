@@ -86,6 +86,7 @@ export interface ReminderResponse {
   createdAt: string;
   updatedAt?: string | null;
   completedAt?: string | null;
+  links?: string | null;
 }
 
 export interface CreateReminderRequest {
@@ -103,6 +104,7 @@ export interface CreateReminderRequest {
   recurrenceEndDate?: string | null;
   notificationOffsets?: string | null;
   notificationChannels?: NotificationChannel | null;
+  links?: string | null;
 }
 
 export interface UpdateReminderRequest {
@@ -121,6 +123,7 @@ export interface UpdateReminderRequest {
   recurrenceEndDate?: string | null;
   notificationOffsets?: string | null;
   notificationChannels?: NotificationChannel | null;
+  links?: string | null;
 }
 
 export interface ReminderListQuery {
@@ -238,6 +241,14 @@ export interface CategoryDistributionResponse {
   percentage: number;
 }
 
+export interface WeeklyStatItem {
+  weekStart: string;
+  created: number;
+  completed: number;
+  deleted: number;
+  completionRate: number;
+}
+
 // ── Natural Language ───────────────────────────────────────────────────────────
 
 export interface NaturalLanguageRequest {
@@ -254,4 +265,22 @@ export interface NaturalLanguageResponse {
 export interface ConflictCheckRequest {
   startDateTime: string;
   endDateTime: string;
+}
+
+export interface BatchOperationResult { succeeded: number; failed: number; failedIds: number[]; }
+
+// ── Shares ─────────────────────────────────────────────────────────────────────
+
+export interface ShareResponse {
+  id: number;
+  reminderId: number;
+  sharedWithEmail: string;
+  sharedWithDisplayName: string;
+  permission: number;
+  sharedAt: string;
+}
+
+export interface ShareReminderRequest {
+  targetEmail: string;
+  permission: number;
 }

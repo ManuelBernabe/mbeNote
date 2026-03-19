@@ -109,4 +109,26 @@ public class AnalyticsService : IAnalyticsService
 
         return distribution;
     }
+
+    public async Task<IReadOnlyList<WeeklyStatItem>> GetWeeklyStatsAsync(int userId, int weeksBack = 8)
+    {
+        var from = DateTime.UtcNow.AddDays(-weeksBack * 7);
+        var history = await _db.ReminderHistory
+            .Where(h => h.UserId == userId && h.Timestamp >= from)
+            .ToListAsync();
+
+        var result = new List<WeeklyStatItem>();
+        for (int i = weeksBack - 1; i >= 0; i--)
+        {
+            var weekStart = DateTime.UtcNow.Date.AddDays(-i * 7 - (int)DateTime.UtcNow.DayOfWeek);
+            var weekEnd = weekStart.AddDays(7);
+            var week = history.Where(h => h.Timestamp >= weekStart && h.Timestamp < weekEnd).ToList();
+            var created = week.Count(h => h.Action == HistoryAction.Created);
+            var completed = week.Count(h => h.Action == HistoryAction.Completed);
+            var deleted = week.Count(h => h.Action == HistoryAction.Deleted);
+            var rate = created > 0 ? (double)completed / created * 100 : 0;
+            result.Add(new WeeklyStatItem(weekStart, created, completed, deleted, Math.Round(rate, 1)));
+        }
+        return result;
+    }
 }

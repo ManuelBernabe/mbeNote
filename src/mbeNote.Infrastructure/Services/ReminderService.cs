@@ -48,6 +48,7 @@ public class ReminderService : IReminderService
             RecurrenceEndDate = request.RecurrenceEndDate,
             NotificationOffsets = request.NotificationOffsets ?? "[15]",
             NotificationChannels = request.NotificationChannels ?? NotificationChannel.InApp,
+            Links = request.Links,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -83,6 +84,7 @@ public class ReminderService : IReminderService
         if (request.RecurrenceEndDate.HasValue) reminder.RecurrenceEndDate = request.RecurrenceEndDate.Value;
         if (request.NotificationOffsets != null) reminder.NotificationOffsets = request.NotificationOffsets;
         if (request.NotificationChannels.HasValue) reminder.NotificationChannels = request.NotificationChannels.Value;
+        if (request.Links != null) reminder.Links = request.Links;
 
         reminder.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -250,7 +252,8 @@ public class ReminderService : IReminderService
             original.RecurrenceRule,
             original.RecurrenceEndDate,
             original.NotificationOffsets,
-            original.NotificationChannels
+            original.NotificationChannels,
+            original.Links
         );
 
         return await CreateAsync(userId, request);
@@ -310,6 +313,84 @@ public class ReminderService : IReminderService
             ?? throw new KeyNotFoundException("Aviso no encontrado.");
     }
 
+    public async Task<BatchOperationResult> BatchDeleteAsync(int userId, IReadOnlyList<int> ids)
+    {
+        var reminders = await _db.Reminders
+            .Where(r => ids.Contains(r.Id) && r.UserId == userId && !r.IsDeleted)
+            .ToListAsync();
+
+        var failedIds = new List<int>();
+        var succeeded = 0;
+
+        foreach (var reminder in reminders)
+        {
+            try
+            {
+                var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
+                reminder.IsDeleted = true;
+                reminder.UpdatedAt = DateTime.UtcNow;
+                await _history.RecordAsync(reminder.Id, userId, HistoryAction.Deleted, previousState, null, $"Aviso eliminado en lote: {reminder.Title}");
+                await _notifications.CancelForReminderAsync(reminder.Id);
+                succeeded++;
+            }
+            catch
+            {
+                failedIds.Add(reminder.Id);
+            }
+        }
+
+        // Add ids not found as failed
+        var foundIds = reminders.Select(r => r.Id).ToHashSet();
+        foreach (var id in ids)
+            if (!foundIds.Contains(id) && !failedIds.Contains(id))
+                failedIds.Add(id);
+
+        try { await _db.SaveChangesAsync(); }
+        catch { /* best-effort */ }
+
+        return new BatchOperationResult(succeeded, failedIds.Count, failedIds);
+    }
+
+    public async Task<BatchOperationResult> BatchCompleteAsync(int userId, IReadOnlyList<int> ids)
+    {
+        var reminders = await _db.Reminders
+            .Where(r => ids.Contains(r.Id) && r.UserId == userId && !r.IsDeleted)
+            .ToListAsync();
+
+        var failedIds = new List<int>();
+        var succeeded = 0;
+
+        foreach (var reminder in reminders)
+        {
+            try
+            {
+                var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
+                reminder.Status = ReminderStatus.Completed;
+                reminder.CompletedAt = DateTime.UtcNow;
+                reminder.UpdatedAt = DateTime.UtcNow;
+                var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
+                await _history.RecordAsync(reminder.Id, userId, HistoryAction.Completed, previousState, newState, $"Aviso completado en lote: {reminder.Title}");
+                await _notifications.CancelForReminderAsync(reminder.Id);
+                succeeded++;
+            }
+            catch
+            {
+                failedIds.Add(reminder.Id);
+            }
+        }
+
+        // Add ids not found as failed
+        var foundIds = reminders.Select(r => r.Id).ToHashSet();
+        foreach (var id in ids)
+            if (!foundIds.Contains(id) && !failedIds.Contains(id))
+                failedIds.Add(id);
+
+        try { await _db.SaveChangesAsync(); }
+        catch { /* best-effort */ }
+
+        return new BatchOperationResult(succeeded, failedIds.Count, failedIds);
+    }
+
     private Task<ReminderResponse> MapToResponseAsync(Reminder r)
     {
         var recurrenceDesc = !string.IsNullOrEmpty(r.RecurrenceRule)
@@ -325,7 +406,8 @@ public class ReminderService : IReminderService
             r.RecurrenceRule, recurrenceDesc, r.RecurrenceEndDate,
             r.NotificationOffsets, r.NotificationChannels,
             r.SnoozedUntil, r.SnoozeCount,
-            r.CreatedAt, r.UpdatedAt, r.CompletedAt
+            r.CreatedAt, r.UpdatedAt, r.CompletedAt,
+            r.Links
         ));
     }
 }

@@ -19,6 +19,8 @@ public interface IReminderService
     Task<IReadOnlyList<ReminderResponse>> GetUpcomingAsync(int userId, int count = 5);
     Task<IReadOnlyList<ReminderResponse>> GetOverdueAsync(int userId);
     Task<IReadOnlyList<ReminderResponse>> CheckConflictsAsync(int userId, DateTime start, DateTime end);
+    Task<BatchOperationResult> BatchDeleteAsync(int userId, IReadOnlyList<int> ids);
+    Task<BatchOperationResult> BatchCompleteAsync(int userId, IReadOnlyList<int> ids);
 }
 
 public interface IRecurrenceService
@@ -69,6 +71,7 @@ public interface IAnalyticsService
     Task<IReadOnlyList<ActiveHoursResponse>> GetActiveHoursAsync(int userId);
     Task<StreakResponse> GetStreaksAsync(int userId);
     Task<IReadOnlyList<CategoryDistributionResponse>> GetCategoryDistributionAsync(int userId);
+    Task<IReadOnlyList<WeeklyStatItem>> GetWeeklyStatsAsync(int userId, int weeksBack = 8);
 }
 
 public interface INaturalLanguageParserService
