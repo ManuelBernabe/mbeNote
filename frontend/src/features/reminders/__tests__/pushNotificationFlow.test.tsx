@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReminderOpenPage } from '../ReminderOpenPage';
-import { ReminderStatus, ReminderPriority } from '../../../types';
+import { ReminderStatus, ReminderPriority, NotificationChannel } from '../../../types';
 import type { ReminderResponse } from '../../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -29,25 +29,22 @@ const makeReminder = (id = 1): ReminderResponse => ({
   startDateTime: new Date(Date.now() + 86400000).toISOString(),
   endDateTime: null,
   isAllDay: false,
+  timeZone: 'Europe/Madrid',
   status: ReminderStatus.Active,
   priority: ReminderPriority.High,
   categoryId: null,
   categoryName: null,
   categoryColor: null,
   recurrenceRule: null,
-  notificationOffsets: [15],
-  channel: 7,
+  notificationOffsets: '15',
+  notificationChannels: NotificationChannel.InApp | NotificationChannel.Push as unknown as NotificationChannel,
   location: null,
-  color: null,
+  color: '#3b82f6',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   completedAt: null,
   snoozedUntil: null,
   snoozeCount: 0,
-  googleCalendarEventId: null,
-  outlookEventId: null,
-  tags: [],
-  emailEnabled: false,
 });
 
 /** Simple Cache API mock */
