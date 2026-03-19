@@ -89,9 +89,15 @@ vi.mock('../../../hooks/useReminders', async () => {
 });
 
 vi.mock('../components/ReminderForm', () => ({
-  ReminderForm: ({ onClose }: { onClose: () => void }) => (
+  ReminderForm: ({ reminder, onClose, onSaved }: {
+    reminder: ReminderResponse | null;
+    onClose: () => void;
+    onSaved: () => void;
+  }) => (
     <div data-testid="reminder-form">
-      <button onClick={onClose}>Cerrar form</button>
+      <span data-testid="form-reminder-title">{reminder?.title ?? 'nuevo'}</span>
+      <button data-testid="save-btn" onClick={onSaved}>Guardar</button>
+      <button data-testid="cancel-btn" onClick={onClose}>Cancelar</button>
     </div>
   ),
 }));
@@ -153,31 +159,19 @@ describe('Push notification → ReminderOpenPage flow', () => {
   describe('Cache API navigation (primary iOS path)', () => {
     it('reads pending URL on mount and navigates to /reminder/:id', async () => {
       const cacheMock = makeCacheMock('/reminder/42');
-      const cachesMock = {
-        open: vi.fn().mockResolvedValue(cacheMock),
-        match: vi.fn(),
-      };
-      vi.stubGlobal('caches', cachesMock);
+      vi.stubGlobal('caches', { open: vi.fn().mockResolvedValue(cacheMock) });
 
-      // Render just the NotificationClickHandler via a wrapper
-      const NotificationClickHandler = (
-        await import('../../../App')
-      ).App;
-
-      // We can't easily test NotificationClickHandler in isolation because it
-      // uses useNavigate from its parent BrowserRouter context.
-      // Instead, verify the cache is consumed correctly by inspecting mock calls.
-
-      // Simulate what consumePending() does
-      const cache = await cachesMock.open(CACHE_NAME);
+      // Simulate what consumePending() does inside NotificationClickHandler
+      const cache = await caches.open(CACHE_NAME);
       const r = await cache.match('nav');
       expect(r).toBeDefined();
-      if (r) {
-        const url = await r.text();
-        expect(url).toBe('/reminder/42');
-        await cache.delete('nav');
-        expect(cacheMock.delete).toHaveBeenCalledWith('nav');
-      }
+      const url = await r!.text();
+      expect(url).toBe('/reminder/42');
+      // Cache entry is deleted after reading (consumed once)
+      await cache.delete('nav');
+      expect(cacheMock.delete).toHaveBeenCalledWith('nav');
+      // The URL format is correct for the /reminder/:id route
+      expect(url).toMatch(/^\/reminder\/\d+$/);
     });
 
     it('does nothing when cache is empty', async () => {
@@ -306,7 +300,7 @@ describe('Push notification → ReminderOpenPage flow', () => {
         isError: false,
       });
 
-      const { container, getByTestId } = renderWithProviders(
+      renderWithProviders(
         <Routes>
           <Route path="/reminder/:id" element={<ReminderOpenPage />} />
         </Routes>,
@@ -315,12 +309,89 @@ describe('Push notification → ReminderOpenPage flow', () => {
 
       await waitFor(() => expect(screen.getByText('Consulta médica')).toBeInTheDocument());
 
-      // Find and click the Edit button
-      const editBtn = screen.getByTestId('edit-btn');
-      await act(async () => { editBtn.click(); });
+      await act(async () => { screen.getByTestId('edit-btn').click(); });
 
-      // ReminderForm mock should now be visible
-      await waitFor(() => expect(getByTestId('reminder-form')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('reminder-form')).toBeInTheDocument());
+    });
+
+    it('edit form receives the correct reminder data', async () => {
+      const reminder = makeReminder(7);
+      useReminderMock.mockReturnValue({ data: reminder, isLoading: false, isError: false });
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/reminder/:id" element={<ReminderOpenPage />} />
+        </Routes>,
+        { initialPath: '/reminder/7' }
+      );
+
+      await waitFor(() => expect(screen.getByText('Consulta médica')).toBeInTheDocument());
+      await act(async () => { screen.getByTestId('edit-btn').click(); });
+
+      // The form receives the reminder and shows its title
+      await waitFor(() => {
+        expect(screen.getByTestId('form-reminder-title').textContent).toBe('Consulta médica');
+      });
+    });
+
+    it('after saving shows success toast and navigates back to /reminders', async () => {
+      const { toast } = await import('sonner');
+      const reminder = makeReminder(7);
+      useReminderMock.mockReturnValue({ data: reminder, isLoading: false, isError: false });
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/reminder/:id" element={<ReminderOpenPage />} />
+          <Route path="/reminders" element={<div data-testid="reminders-list">lista</div>} />
+        </Routes>,
+        { initialPath: '/reminder/7' }
+      );
+
+      // Open edit form
+      await waitFor(() => expect(screen.getByText('Consulta médica')).toBeInTheDocument());
+      await act(async () => { screen.getByTestId('edit-btn').click(); });
+      await waitFor(() => expect(screen.getByTestId('reminder-form')).toBeInTheDocument());
+
+      // Save the form
+      await act(async () => { screen.getByTestId('save-btn').click(); });
+
+      // Toast de éxito
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Aviso actualizado');
+      });
+
+      // Navega de vuelta a /reminders
+      await waitFor(() => {
+        expect(screen.getByTestId('reminders-list')).toBeInTheDocument();
+      });
+    });
+
+    it('cancelling edit returns to detail view without toast', async () => {
+      const { toast } = await import('sonner');
+      const reminder = makeReminder(7);
+      useReminderMock.mockReturnValue({ data: reminder, isLoading: false, isError: false });
+
+      renderWithProviders(
+        <Routes>
+          <Route path="/reminder/:id" element={<ReminderOpenPage />} />
+          <Route path="/reminders" element={<div data-testid="reminders-list">lista</div>} />
+        </Routes>,
+        { initialPath: '/reminder/7' }
+      );
+
+      await waitFor(() => expect(screen.getByText('Consulta médica')).toBeInTheDocument());
+      await act(async () => { screen.getByTestId('edit-btn').click(); });
+      await waitFor(() => expect(screen.getByTestId('reminder-form')).toBeInTheDocument());
+
+      // Cancel — onClose navigates back to /reminders
+      await act(async () => { screen.getByTestId('cancel-btn').click(); });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reminders-list')).toBeInTheDocument();
+      });
+
+      // No toast on cancel
+      expect(toast.success).not.toHaveBeenCalled();
     });
   });
 
