@@ -1,63 +1,65 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 export function useAppUpdate() {
   const [needsRefresh, setNeedsRefresh] = useState(false);
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!('serviceWorker' in navigator)) return;
 
-    // Get current registration
-    navigator.serviceWorker.getRegistration().then((reg) => {
-      if (reg) setRegistration(reg);
-    });
+    const onControllerChange = () => {
+      if (mountedRef.current) setNeedsRefresh(true);
+    };
 
-    // When a new SW takes control (skipWaiting already called in sw.js install),
-    // prompt the user to reload to get the new version
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        setNeedsRefresh(true);
-      }
-    });
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
-    // Also detect if there's already a waiting SW on load
     navigator.serviceWorker.ready.then((reg) => {
-      setRegistration(reg);
+      if (!mountedRef.current) return;
+      registrationRef.current = reg;
+
+      // Already a waiting SW on load (e.g. user had the tab open during deploy)
       if (reg.waiting) {
         setNeedsRefresh(true);
       }
 
-      // Listen for new SW installing
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            setNeedsRefresh(true);
+            if (mountedRef.current) setNeedsRefresh(true);
           }
         });
       });
     });
+
+    return () => {
+      mountedRef.current = false;
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
-  const checkForUpdate = useCallback(async () => {
-    if (!registration) return false;
+  const checkForUpdate = useCallback(async (): Promise<boolean> => {
+    const reg = registrationRef.current;
+    if (!reg) return false;
     try {
-      await registration.update();
+      await reg.update();
       return true;
     } catch {
       return false;
     }
-  }, [registration]);
+  }, []);
 
   const applyUpdate = useCallback(() => {
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    const reg = registrationRef.current;
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     }
-    window.location.reload();
-  }, [registration]);
+    // Hard reload — forces re-fetch of index.html ignoring browser cache
+    window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+  }, []);
 
   return { needsRefresh, checkForUpdate, applyUpdate };
 }

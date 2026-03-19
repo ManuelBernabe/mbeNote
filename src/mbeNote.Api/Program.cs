@@ -121,8 +121,26 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Serve frontend static files
+// index.html: no-cache so browsers always re-validate on reload
+// Hashed assets (JS/CSS): cache 1 year since filenames change on each build
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.File.Name;
+        if (path.EndsWith(".html") || path == "sw.js" || path == "manifest.json")
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            ctx.Context.Response.Headers["Pragma"] = "no-cache";
+        }
+        else if (path.EndsWith(".js") || path.EndsWith(".css") || path.EndsWith(".woff2"))
+        {
+            // Vite hashes filenames, safe to cache long-term
+            ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+        }
+    }
+});
 
 
 // Health check endpoint
