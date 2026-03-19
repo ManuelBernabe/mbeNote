@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   BrowserRouter,
   Routes,
@@ -66,6 +67,7 @@ function NotificationClickHandler() {
         if (!r) return;
         const url = await r.text();
         await cache.delete('nav');
+        toast.info(`[DEBUG] URL notificación: ${url}`, { duration: 10000 });
         handleNotificationUrl(url);
       } catch { /* ignore */ }
     };
