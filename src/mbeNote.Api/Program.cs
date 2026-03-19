@@ -14,9 +14,17 @@ using mbeNote.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// Database — use DATA_DIR env var if set (e.g. Railway persistent volume at /data)
+var dataDir = Environment.GetEnvironmentVariable("DATA_DIR");
+var dbPath = string.IsNullOrWhiteSpace(dataDir)
+    ? "mbeNote.db"
+    : Path.Combine(dataDir, "mbeNote.db");
+if (!string.IsNullOrWhiteSpace(dataDir) && !Directory.Exists(dataDir))
+    Directory.CreateDirectory(dataDir);
+var connectionString = $"Data Source={dbPath}";
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(connectionString));
 
 // Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]!;
