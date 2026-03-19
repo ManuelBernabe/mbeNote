@@ -18,6 +18,7 @@ import { useUIStore } from '../stores/uiStore';
 import { useSignalR } from '../hooks/useSignalR';
 import { NotificationBell } from '../features/notifications/components/NotificationBell';
 import { IOSInstallBanner } from '../components/shared/IOSInstallBanner';
+import { UpdateBanner } from '../components/shared/UpdateBanner';
 
 function getUserFromStorage(): { displayName: string; email: string } {
   try {
@@ -232,6 +233,7 @@ export function RootLayout() {
         </nav>
       )}
 
+      <UpdateBanner />
       <IOSInstallBanner />
     </div>
   );
