@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using mbeNote.Core.DTOs;
 using mbeNote.Core.Enums;
@@ -10,6 +11,11 @@ namespace mbeNote.Infrastructure.Services;
 
 public class ReminderService : IReminderService
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
+
     private readonly AppDbContext _db;
     private readonly IRecurrenceService _recurrence;
     private readonly IReminderHistoryService _history;
@@ -48,7 +54,7 @@ public class ReminderService : IReminderService
         _db.Reminders.Add(reminder);
         await _db.SaveChangesAsync();
 
-        var newState = JsonSerializer.Serialize(reminder);
+        var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Created, null, newState, $"Aviso creado: {reminder.Title}");
 
         // Schedule notifications
@@ -60,7 +66,7 @@ public class ReminderService : IReminderService
     public async Task<ReminderResponse> UpdateAsync(int userId, int id, UpdateReminderRequest request)
     {
         var reminder = await GetOwnedReminderAsync(userId, id);
-        var previousState = JsonSerializer.Serialize(reminder);
+        var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
 
         if (request.Title != null) reminder.Title = request.Title.Trim();
         if (request.Description != null) reminder.Description = request.Description.Trim();
@@ -81,7 +87,7 @@ public class ReminderService : IReminderService
         reminder.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        var newState = JsonSerializer.Serialize(reminder);
+        var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Updated, previousState, newState, $"Aviso actualizado: {reminder.Title}");
 
         // Reschedule notifications
@@ -93,7 +99,7 @@ public class ReminderService : IReminderService
     public async Task DeleteAsync(int userId, int id)
     {
         var reminder = await GetOwnedReminderAsync(userId, id);
-        var previousState = JsonSerializer.Serialize(reminder);
+        var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
 
         reminder.IsDeleted = true;
         reminder.UpdatedAt = DateTime.UtcNow;
@@ -144,14 +150,14 @@ public class ReminderService : IReminderService
     public async Task<ReminderResponse> CompleteAsync(int userId, int id)
     {
         var reminder = await GetOwnedReminderAsync(userId, id);
-        var previousState = JsonSerializer.Serialize(reminder);
+        var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
 
         reminder.Status = ReminderStatus.Completed;
         reminder.CompletedAt = DateTime.UtcNow;
         reminder.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        var newState = JsonSerializer.Serialize(reminder);
+        var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Completed, previousState, newState, $"Aviso completado: {reminder.Title}");
         await _notifications.CancelForReminderAsync(reminder.Id);
 
@@ -161,7 +167,7 @@ public class ReminderService : IReminderService
     public async Task<ReminderResponse> SnoozeAsync(int userId, int id, int minutes)
     {
         var reminder = await GetOwnedReminderAsync(userId, id);
-        var previousState = JsonSerializer.Serialize(reminder);
+        var previousState = JsonSerializer.Serialize(reminder, _jsonOptions);
 
         var snoozeUntil = DateTime.Now.AddMinutes(minutes);
         reminder.SnoozedUntil = snoozeUntil;
@@ -182,7 +188,7 @@ public class ReminderService : IReminderService
         });
         await _db.SaveChangesAsync();
 
-        var newState = JsonSerializer.Serialize(reminder);
+        var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Snoozed, previousState, newState, $"Aviso pospuesto {minutes} minutos: {reminder.Title}");
 
         return await MapToResponseAsync(reminder);
@@ -220,7 +226,7 @@ public class ReminderService : IReminderService
         reminder.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        var newState = JsonSerializer.Serialize(reminder);
+        var newState = JsonSerializer.Serialize(reminder, _jsonOptions);
         await _history.RecordAsync(reminder.Id, userId, HistoryAction.Restored, null, newState, $"Aviso restaurado: {reminder.Title}");
 
         return await MapToResponseAsync(reminder);
