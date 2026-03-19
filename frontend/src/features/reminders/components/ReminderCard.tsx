@@ -188,7 +188,7 @@ export function ReminderCard({
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-1 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
           {reminder.status !== ReminderStatus.Completed && (
             <button
               onClick={handleComplete}
