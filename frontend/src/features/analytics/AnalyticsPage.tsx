@@ -319,17 +319,14 @@ export function AnalyticsPage() {
               />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
-                formatter={
-                  // @ts-ignore recharts Formatter generic mismatch
-                  (value: unknown, name: unknown, props: { payload?: { completionRate?: number } }) => {
-                    const n = String(name ?? '');
-                    if (n === 'Creados' || n === 'Completados') {
-                      const rate = props.payload?.completionRate;
-                      return [n === 'Completados' ? `${value} (Tasa: ${rate}%)` : value, n];
-                    }
-                    return [value, n];
+                formatter={(value, name, props) => {
+                  const n = String(name ?? '');
+                  const payload = (props as { payload?: { completionRate?: number } }).payload;
+                  if (n === 'Completados' && payload?.completionRate != null) {
+                    return [`${String(value)} (Tasa: ${payload.completionRate}%)`, n];
                   }
-                }
+                  return [String(value ?? ''), n];
+                }}
               />
               <Legend />
               <Bar dataKey="Creados" fill="#3b82f6" radius={[3, 3, 0, 0]} />
