@@ -319,18 +319,20 @@ export function AnalyticsPage() {
               />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
-                formatter={(value: unknown, name: string, props) => {
-                  if (name === 'Creados' || name === 'Completados') {
+                formatter={((value: unknown, name: unknown, props: { payload?: { completionRate?: number } }) => {
+                  const n = String(name ?? '');
+                  if (n === 'Creados' || n === 'Completados') {
                     const rate = props.payload?.completionRate;
                     return [
-                      name === 'Completados'
+                      n === 'Completados'
                         ? `${value} (Tasa: ${rate}%)`
                         : value,
-                      name,
+                      n,
                     ];
                   }
-                  return [value, name];
-                }}
+                  return [value, n];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                }) as any}
               />
               <Legend />
               <Bar dataKey="Creados" fill="#3b82f6" radius={[3, 3, 0, 0]} />
