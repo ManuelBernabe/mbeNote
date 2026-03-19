@@ -319,7 +319,7 @@ export function AnalyticsPage() {
               />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
-                formatter={(value: number, name: string, props) => {
+                formatter={(value: unknown, name: string, props) => {
                   if (name === 'Creados' || name === 'Completados') {
                     const rate = props.payload?.completionRate;
                     return [
