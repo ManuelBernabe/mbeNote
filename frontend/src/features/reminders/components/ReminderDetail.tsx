@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Calendar,
@@ -11,12 +11,13 @@ import {
   Edit3,
   Check,
   Trash2,
+  AlarmClock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '../../../lib/utils';
-import { useCompleteReminder, useDeleteReminder } from '../../../hooks/useReminders';
+import { useCompleteReminder, useDeleteReminder, useSnoozeReminder } from '../../../hooks/useReminders';
 import { ReminderPriority, ReminderStatus } from '../../../types';
 import type { ReminderResponse } from '../../../types';
 
@@ -26,6 +27,15 @@ const priorityConfig: Record<number, { label: string; color: string; bg: string 
   [ReminderPriority.Medium]: { label: 'Media', color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-500/20' },
   [ReminderPriority.Low]: { label: 'Baja', color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-500/20' },
 };
+
+const SNOOZE_PRESETS = [
+  { label: '15 min', minutes: 15 },
+  { label: '30 min', minutes: 30 },
+  { label: '1 hora', minutes: 60 },
+  { label: '2 horas', minutes: 120 },
+  { label: '4 horas', minutes: 240 },
+  { label: 'Mañana', minutes: 1440 },
+];
 
 interface ReminderDetailProps {
   reminder: ReminderResponse;
@@ -42,7 +52,11 @@ export function ReminderDetail({
 }: ReminderDetailProps) {
   const completeMutation = useCompleteReminder();
   const deleteMutation = useDeleteReminder();
+  const snoozeMutation = useSnoozeReminder();
   const priority = priorityConfig[reminder.priority] ?? priorityConfig[ReminderPriority.Medium];
+
+  const [showSnoozePicker, setShowSnoozePicker] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
 
   const handleComplete = async () => {
     try {
@@ -66,6 +80,27 @@ export function ReminderDetail({
     }
   };
 
+  const handleSnooze = async (minutes: number) => {
+    if (!minutes || minutes < 1) return;
+    try {
+      await snoozeMutation.mutateAsync({ id: String(reminder.id), data: { minutes } });
+      toast.success(`Pospuesto ${minutes < 60 ? `${minutes} min` : `${minutes / 60}h`}`);
+      onRefresh();
+      onClose();
+    } catch {
+      toast.error('Error al posponer');
+    }
+  };
+
+  const handleCustomSnooze = () => {
+    const mins = parseInt(customMinutes, 10);
+    if (!mins || mins < 1) {
+      toast.error('Introduce un número válido de minutos');
+      return;
+    }
+    handleSnooze(mins);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -85,27 +120,24 @@ export function ReminderDetail({
         {/* Color strip */}
         <div
           className="h-2 w-full"
-          style={{
-            backgroundColor: reminder.categoryColor ?? '#3b82f6',
-          }}
+          style={{ backgroundColor: reminder.categoryColor ?? '#3b82f6' }}
         />
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-5">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
-                  priority.bg,
-                  priority.color
-                )}
-              >
+              <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', priority.bg, priority.color)}>
                 {priority.label}
               </span>
               {reminder.status === ReminderStatus.Completed && (
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                   Completado
+                </span>
+              )}
+              {reminder.status === ReminderStatus.Snoozed && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                  Pospuesto
                 </span>
               )}
             </div>
@@ -130,7 +162,6 @@ export function ReminderDetail({
           )}
 
           <div className="space-y-3">
-            {/* Date */}
             <div className="flex items-center gap-3 text-sm">
               <Calendar className="h-4 w-4 text-slate-400" />
               <span className="text-slate-700 dark:text-slate-300">
@@ -138,7 +169,6 @@ export function ReminderDetail({
               </span>
             </div>
 
-            {/* Time */}
             {!reminder.isAllDay && (
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="h-4 w-4 text-slate-400" />
@@ -151,17 +181,13 @@ export function ReminderDetail({
               </div>
             )}
 
-            {/* Location */}
             {reminder.location && (
               <div className="flex items-center gap-3 text-sm">
                 <MapPin className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-700 dark:text-slate-300">
-                  {reminder.location}
-                </span>
+                <span className="text-slate-700 dark:text-slate-300">{reminder.location}</span>
               </div>
             )}
 
-            {/* Category */}
             {reminder.categoryName && (
               <div className="flex items-center gap-3 text-sm">
                 <Tag className="h-4 w-4 text-slate-400" />
@@ -170,33 +196,73 @@ export function ReminderDetail({
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: reminder.categoryColor ?? '#94a3b8' }}
                   />
-                  <span className="text-slate-700 dark:text-slate-300">
-                    {reminder.categoryName}
-                  </span>
+                  <span className="text-slate-700 dark:text-slate-300">{reminder.categoryName}</span>
                 </div>
               </div>
             )}
 
-            {/* Recurrence */}
             {reminder.recurrenceRule && (
               <div className="flex items-center gap-3 text-sm">
                 <Repeat className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-700 dark:text-slate-300">
-                  Recurrente
-                </span>
+                <span className="text-slate-700 dark:text-slate-300">Recurrente</span>
               </div>
             )}
 
-            {/* Notification */}
             {reminder.notificationOffsets && reminder.notificationOffsets !== '[]' && (
               <div className="flex items-center gap-3 text-sm">
                 <Bell className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-700 dark:text-slate-300">
-                  Notificación configurada
-                </span>
+                <span className="text-slate-700 dark:text-slate-300">Notificación configurada</span>
               </div>
             )}
           </div>
+
+          {/* Snooze picker */}
+          <AnimatePresence>
+            {showSnoozePicker && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <p className="mb-3 text-sm font-medium text-amber-800 dark:text-amber-300">
+                    ¿Cuánto tiempo posponer?
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SNOOZE_PRESETS.map((preset) => (
+                      <button
+                        key={preset.minutes}
+                        onClick={() => handleSnooze(preset.minutes)}
+                        disabled={snoozeMutation.isPending}
+                        className="rounded-lg border border-amber-300 bg-white px-2 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Minutos personalizados"
+                      value={customMinutes}
+                      onChange={(e) => setCustomMinutes(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCustomSnooze()}
+                      className="input-field flex-1 text-sm"
+                    />
+                    <button
+                      onClick={handleCustomSnooze}
+                      disabled={snoozeMutation.isPending}
+                      className="btn-secondary shrink-0 text-sm"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Actions */}
@@ -206,8 +272,18 @@ export function ReminderDetail({
               <Check className="h-4 w-4" /> Completar
             </button>
           )}
+          <button
+            onClick={() => setShowSnoozePicker((v) => !v)}
+            className={cn(
+              'btn-secondary gap-2',
+              showSnoozePicker && 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/40 dark:text-amber-300'
+            )}
+          >
+            <AlarmClock className="h-4 w-4" />
+            <span className="hidden sm:inline">Posponer</span>
+          </button>
           <button onClick={onEdit} className="btn-secondary gap-2">
-            <Edit3 className="h-4 w-4" /> Editar
+            <Edit3 className="h-4 w-4" />
           </button>
           <button onClick={handleDelete} className="btn-danger gap-2">
             <Trash2 className="h-4 w-4" />
